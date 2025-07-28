@@ -27,21 +27,17 @@ local function create_camera_window(player)
     style = "frame_header_flow"
   }
   header_flow.drag_target = window
-  local header_title = header_flow.add{
+  header_flow.add{
     type = "label",
-    style = "frame_title",
+    style = constants.style_prefix.."camera_window_title",
     caption = {"windowed-cameras.window-title", window_ordinal},
     ignored_by_interaction = true,
   }
-  header_title.style.top_margin = -3
-  local header_drag = header_flow.add{
+  header_flow.add{
     type = "empty-widget",
-    style = "draggable_space",
+    style = constants.style_prefix.."camera_window_dragger",
     ignored_by_interaction = true,
   }
-  header_drag.style.horizontally_stretchable = true
-  header_drag.style.right_margin = 4
-  header_drag.style.height = 24
   header_flow.add{
     type = "sprite-button",
     style = "close_button",
@@ -57,15 +53,16 @@ local function create_camera_window(player)
   }
   local camera_view = content_flow.add{
     type = "camera",
-    name = "camera-view",
+    name = constants.cemera_view_name,
+    style = constants.style_prefix.."camera_window_camera_view",
     position = player.position,
     surface_index = player.surface_index,
+    zoom = constants.zoom_exp_base ^ constants.zoom_init_power - 1,
   }
-  camera_view.style.horizontally_stretchable = true
-  camera_view.style.vertically_stretchable = true
 end
 
 
+-- Handle shortcut button press
 script.on_event(defines.events.on_lua_shortcut, function(event)
   if event.prototype_name ~= constants.shortcut_create_window_name then return end
 
@@ -74,6 +71,7 @@ script.on_event(defines.events.on_lua_shortcut, function(event)
   create_camera_window(player)
 end)
 
+-- Handle button click
 script.on_event(defines.events.on_gui_click, function(event)
   if
     event.element.type == "sprite-button" and
@@ -85,3 +83,32 @@ script.on_event(defines.events.on_gui_click, function(event)
     event.element.parent.parent.destroy()
   end
 end)
+
+-- Handle zoom input
+---@param event EventData.CustomInputEvent
+local function zoom_input_handler(event)
+  -- This function is called whenever the built-in zoom in or out control is pressed (by default
+  -- is mouse scroll), anywhere in the game screen. We can check whether this happens while the
+  -- mouse is inside our camera view, but we can' conditionally block the game from zooming its
+  -- main view. So unfortunately, the UX will have to be that both the main view and camera view
+  -- zoom when the user scrolls their mouse in a camera view.
+  if not event.element or event.element.name ~= constants.cemera_view_name then return end
+
+  ---@type LuaGuiElement
+  local camera_view = event.element
+  -- Make the camera view zoom in or out, in exponential scale
+  local zoom_power = math.log(camera_view.zoom + 1, constants.zoom_exp_base)
+  if event.input_name == constants.input_zoom_in then
+    zoom_power = zoom_power + 1
+  else
+    zoom_power = zoom_power - 1
+  end
+  local new_zoom_level = constants.zoom_exp_base ^ zoom_power - 1
+  -- Clamp the zoom level between (0, 4)
+  if new_zoom_level > 0 and new_zoom_level < 4 then
+    camera_view.zoom = new_zoom_level
+  end
+end
+
+script.on_event(constants.input_zoom_in, zoom_input_handler)
+script.on_event(constants.input_zoom_out, zoom_input_handler)

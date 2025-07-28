@@ -17,5 +17,40 @@ data:extend{
       }
     },
     action = "lua",
-  }
+  },
+
+  {
+    type = "custom-input",
+    name = constants.input_zoom_in,
+    key_sequence = "",
+    linked_game_control = "zoom-in",
+  },
+  {
+    type = "custom-input",
+    name = constants.input_zoom_out,
+    key_sequence = "",
+    linked_game_control = "zoom-out",
+  },
+}
+
+local style = data.raw["gui-style"]["default"]
+
+style[constants.style_prefix.."camera_window_title"] = {
+  type = "label_style",
+  parent = "frame_title",
+  top_margin = -3,
+}
+
+style[constants.style_prefix.."camera_window_dragger"] = {
+  type = "empty_widget_style",
+  parent = "draggable_space",
+  horizontally_stretchable = "on",
+  right_margin = 4,
+  height = 24
+}
+
+style[constants.style_prefix.."camera_window_camera_view"] = {
+  type = "camera_style",
+  horizontally_stretchable = "on",
+  vertically_stretchable = "on",
 }
