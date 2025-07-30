@@ -57,7 +57,7 @@ local function create_camera_window(player)
     style = constants.style_prefix.."camera_window_camera_view",
     position = player.position,
     surface_index = player.surface_index,
-    zoom = constants.zoom_exp_base ^ constants.zoom_init_power - 1,
+    zoom = player.zoom,
   }
 end
 
@@ -84,54 +84,40 @@ script.on_event(defines.events.on_gui_click, function(event)
   end
 end)
 
--- Handle zoom input
----@param event EventData.CustomInputEvent
-local function zoom_input_handler(event)
-  -- This function is called whenever the built-in zoom in or out control is pressed (by default
-  -- is mouse scroll), anywhere in the game screen. We can check whether this happens while the
-  -- mouse is inside our camera view, but we can' conditionally block the game from zooming its
-  -- main view. So unfortunately, the UX will have to be that both the main view and camera view
-  -- zoom when the user scrolls their mouse in a camera view.
-  if not event.element or event.element.name ~= constants.cemera_view_name then return end
+-- Handle remote view movement & zoom
+---@param event EventData.on_player_changed_position | EventData.CustomInputEvent
+local function player_move_zoom_handler(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
 
-  ---@type LuaGuiElement
-  local camera_view = event.element
-  -- Make the camera view zoom in or out, in exponential scale
-  local zoom_power = math.log(camera_view.zoom + 1, constants.zoom_exp_base)
-  if event.input_name == constants.input_zoom_in then
-    zoom_power = zoom_power + 1
-  else
-    zoom_power = zoom_power - 1
+  -- Ensure we are in remote view
+  if player.controller_type ~= defines.controllers.remote then return end
+
+  -- Find the camera window that is selected for editing
+  -- Temporarily it just finds the first window
+  ---@type LuaGuiElement?
+  local camera_window = nil
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
+      camera_window = gui_element
+      break
+    end
   end
-  local new_zoom_level = constants.zoom_exp_base ^ zoom_power - 1
-  -- Clamp the zoom level between (0, 4)
-  if new_zoom_level > 0 and new_zoom_level < 4 then
-    camera_view.zoom = new_zoom_level
-  end
+  if not camera_window then return end
+
+  local camera_view = camera_window.children[2][constants.cemera_view_name]
+
+  camera_view.position = player.position
+  camera_view.zoom = player.zoom
 end
+script.on_event(defines.events.on_player_changed_position, player_move_zoom_handler)
+script.on_event(constants.input_zoom_in, player_move_zoom_handler)
+script.on_event(constants.input_zoom_out, player_move_zoom_handler)
 
-script.on_event(constants.input_zoom_in, zoom_input_handler)
-script.on_event(constants.input_zoom_out, zoom_input_handler)
-
--- Handle move input
----@param event EventData.CustomInputEvent
-local function move_input_handler(event)
-  if not event.element or event.element.name ~= constants.cemera_view_name then return end
-
-  ---@type LuaGuiElement
-  local camera_view = event.element
-  if event.input_name == constants.input_move_up then
-    camera_view.position = {camera_view.position.x, camera_view.position.y - 1}
-  elseif event.input_name == constants.input_move_down then
-    camera_view.position = {camera_view.position.x, camera_view.position.y + 1}
-  elseif event.input_name == constants.input_move_left then
-    camera_view.position = {camera_view.position.x - 1, camera_view.position.y}
-  elseif event.input_name == constants.input_move_right then
-    camera_view.position = {camera_view.position.x + 1, camera_view.position.y}
-  end
-end
-
-script.on_event(constants.input_move_up, move_input_handler)
-script.on_event(constants.input_move_down, move_input_handler)
-script.on_event(constants.input_move_left, move_input_handler)
-script.on_event(constants.input_move_right, move_input_handler)
+-- Handle display changes
+script.on_event(defines.events.on_player_display_scale_changed, function(event)
+  game.print("on_player_display_scale_changed")
+end)
+script.on_event(defines.events.on_player_display_resolution_changed, function(event)
+  game.print("on_player_display_resolution_changed")
+end)
