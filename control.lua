@@ -27,12 +27,23 @@ end)
 
 -- Handle shortcut button press
 script.on_event(defines.events.on_lua_shortcut, function(event)
-  if event.prototype_name ~= constants.shortcut_create_window_name then return end
+  if event.prototype_name ~= constants.shortcut_toggle_display_name then return end
 
   local player = game.get_player(event.player_index)
   if not player then return end
 
-  CameraWindow:create(player)
+  if not player.is_shortcut_toggled(constants.shortcut_toggle_display_name) then
+    -- Show all windows, or create one of none exists
+    local n = CameraWindow:set_all_visible(player, true)
+    if n == 0 then
+      CameraWindow:create(player)
+    end
+    player.set_shortcut_toggled(constants.shortcut_toggle_display_name, true)
+  else
+    -- Hide all windows
+    CameraWindow:set_all_visible(player, false)
+    player.set_shortcut_toggled(constants.shortcut_toggle_display_name, false)
+  end
 end)
 
 -- Handle button clicks

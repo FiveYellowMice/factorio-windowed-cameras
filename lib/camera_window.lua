@@ -13,7 +13,12 @@ local CameraWindow = {
 
 ---Create a new camera window.
 ---@param player LuaPlayer
-function CameraWindow:create(player)
+---@param reference (LuaPlayer | LuaGuiElement)? Reference to set initial position/zoom/surface from.
+function CameraWindow:create(player, reference)
+  if not reference then
+    reference = player
+  end
+
   local instance = setmetatable({}, self)
 
   -- Find the largest ordinal of existing windows, the new window will have an ordinal of that + 1
@@ -56,6 +61,17 @@ function CameraWindow:create(player)
   header_flow.add{
     type = "sprite-button",
     style = "frame_action_button",
+    name = constants.clone_button_name,
+    sprite = "utility/add_white",
+    tooltip = {"windowed-cameras.clone-button-title"},
+    mouse_button_filter = {"left"},
+    tags = {
+      on_click = "clone",
+    },
+  }
+  header_flow.add{
+    type = "sprite-button",
+    style = "frame_action_button",
     name = constants.camera_edit_button_name,
     sprite = constants.sprite_edit_camera,
     tooltip = {"windowed-cameras.edit-button-title"},
@@ -84,9 +100,9 @@ function CameraWindow:create(player)
     type = "camera",
     name = constants.cemera_view_name,
     style = constants.style_prefix.."camera_window_camera_view",
-    position = player.position,
-    surface_index = player.surface_index,
-    zoom = player.zoom,
+    position = reference.position,
+    surface_index = reference.surface_index,
+    zoom = reference.zoom,
     tags = {
       on_click = "toggle_editing",
     },
@@ -128,6 +144,23 @@ function CameraWindow:get_editing(player)
   return instance
 end
 
+---Show or hide all windows, ending all edits in the process.
+---@param player LuaPlayer
+---@param visible boolean
+---@return int #The number of windows affected.
+function CameraWindow:set_all_visible(player, visible)
+  local count = 0
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    local camera_window = CameraWindow:from(gui_element)
+    if camera_window then
+      count = count + 1
+      camera_window:end_editing()
+      camera_window:set_visible(visible)
+    end
+  end
+  return count
+end
+
 function prototype:get_camera()
   return self.window.children[2][constants.cemera_view_name]
 end
@@ -139,6 +172,27 @@ end
 function prototype:destroy()
   self:end_editing()
   self.window.destroy()
+end
+
+function prototype:is_visible()
+  return self.window.visible
+end
+
+---@param visible boolean
+function prototype:set_visible(visible)
+  self.window.visible = visible
+end
+
+function prototype:clone()
+  self:end_editing()
+
+  local player = game.get_player(self.window.player_index)
+  if not player then return end
+
+  local new_window = CameraWindow:create(player, self:get_camera())
+  -- Offset the new window a little
+  new_window.window.location = {self.window.location.x + 20, self.window.location.y + 20}
+  return new_window
 end
 
 function prototype:is_editing()
