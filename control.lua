@@ -112,3 +112,26 @@ end
 
 script.on_event(constants.input_zoom_in, zoom_input_handler)
 script.on_event(constants.input_zoom_out, zoom_input_handler)
+
+-- Handle move input
+---@param event EventData.CustomInputEvent
+local function move_input_handler(event)
+  if not event.element or event.element.name ~= constants.cemera_view_name then return end
+
+  ---@type LuaGuiElement
+  local camera_view = event.element
+  if event.input_name == constants.input_move_up then
+    camera_view.position = {camera_view.position.x, camera_view.position.y - 1}
+  elseif event.input_name == constants.input_move_down then
+    camera_view.position = {camera_view.position.x, camera_view.position.y + 1}
+  elseif event.input_name == constants.input_move_left then
+    camera_view.position = {camera_view.position.x - 1, camera_view.position.y}
+  elseif event.input_name == constants.input_move_right then
+    camera_view.position = {camera_view.position.x + 1, camera_view.position.y}
+  end
+end
+
+script.on_event(constants.input_move_up, move_input_handler)
+script.on_event(constants.input_move_down, move_input_handler)
+script.on_event(constants.input_move_left, move_input_handler)
+script.on_event(constants.input_move_right, move_input_handler)

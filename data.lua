@@ -31,6 +31,30 @@ data:extend{
     key_sequence = "",
     linked_game_control = "zoom-out",
   },
+  {
+    type = "custom-input",
+    name = constants.input_move_up,
+    key_sequence = "",
+    linked_game_control = "move-up",
+  },
+  {
+    type = "custom-input",
+    name = constants.input_move_down,
+    key_sequence = "",
+    linked_game_control = "move-down",
+  },
+  {
+    type = "custom-input",
+    name = constants.input_move_left,
+    key_sequence = "",
+    linked_game_control = "move-left",
+  },
+  {
+    type = "custom-input",
+    name = constants.input_move_right,
+    key_sequence = "",
+    linked_game_control = "move-right",
+  },
 }
 
 local style = data.raw["gui-style"]["default"]
