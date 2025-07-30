@@ -4,7 +4,7 @@ local CameraWindow = require("lib.camera_window")
 
 
 ---@class PlayerData
----@field is_editing_camera boolean Whether the player is editing a camera.
+---@field is_editing_camera boolean Whether the player is editing a camera. This is just for quickly exiting in event handlers, the canonical way to check is `CameraWindow:get_editing()`.
 
 script.on_init(function()
   ---@type PlayerData[]

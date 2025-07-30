@@ -144,17 +144,23 @@ function CameraWindow:get_editing(player)
   return instance
 end
 
+function CameraWindow.__eq(a, b)
+  return a.window == b.window
+end
+
 ---Show or hide all windows, ending all edits in the process.
 ---@param player LuaPlayer
 ---@param visible boolean
 ---@return int #The number of windows affected.
 function CameraWindow:set_all_visible(player, visible)
+  local editing = CameraWindow:get_editing(player)
+  if editing then editing:end_editing() end
+
   local count = 0
   for _, gui_element in ipairs(player.gui.screen.children) do
     local camera_window = CameraWindow:from(gui_element)
     if camera_window then
       count = count + 1
-      camera_window:end_editing()
       camera_window:set_visible(visible)
     end
   end
@@ -214,10 +220,14 @@ function prototype:begin_editing()
   if not player then return end
 
   -- End editing of other windows
+  local editing = CameraWindow:get_editing(player)
+  if editing then editing:end_editing() end
+
+  -- Hide other windows
   for _, gui_element in ipairs(player.gui.screen.children) do
     local other = CameraWindow:from(gui_element)
-    if other then
-      other:end_editing()
+    if other and other ~= self then
+      other:set_visible(false)
     end
   end
 
@@ -243,6 +253,14 @@ function prototype:end_editing()
 
   -- Close remote view
   player.exit_remote_view()
+
+  -- Show other windows
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    local other = CameraWindow:from(gui_element)
+    if other and other ~= self then
+      other:set_visible(true)
+    end
+  end
 
   self:get_edit_button().toggled = false
   self.window.tags = util.merge{self.window.tags, {editing = false}}
