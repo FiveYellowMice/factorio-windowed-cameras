@@ -26,9 +26,8 @@ end)
 
 
 -- Handle shortcut button press
-script.on_event(defines.events.on_lua_shortcut, function(event)
-  if event.prototype_name ~= constants.shortcut_toggle_display_name then return end
-
+---@param event EventData.on_lua_shortcut | EventData.CustomInputEvent
+function shortcut_handler(event)
   local player = game.get_player(event.player_index)
   if not player then return end
 
@@ -44,7 +43,12 @@ script.on_event(defines.events.on_lua_shortcut, function(event)
     CameraWindow:set_all_visible(player, false)
     player.set_shortcut_toggled(constants.shortcut_toggle_display_name, false)
   end
+end
+script.on_event(defines.events.on_lua_shortcut, function(event)
+  if event.prototype_name ~= constants.shortcut_toggle_display_name then return end
+  shortcut_handler(event)
 end)
+script.on_event(constants.input_toggle_display, shortcut_handler)
 
 -- Handle button clicks
 script.on_event(defines.events.on_gui_click, function(event)

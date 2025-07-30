@@ -8,6 +8,7 @@ constants.gui_name_prefix = constants.mod_name.."-"
 constants.style_prefix = string.gsub(constants.mod_name, "-", "_").."_"
 
 constants.shortcut_toggle_display_name = constants.mod_name.."-toggle-display"
+constants.input_toggle_display = constants.mod_name.."-toggle-display"
 constants.input_zoom_in = "zoom-in"
 constants.input_zoom_out = "zoom-out"
 

@@ -18,6 +18,7 @@ data:extend{
     },
     toggleable = true,
     action = "lua",
+    associated_control_input = constants.input_toggle_display,
   },
 
   {
@@ -26,6 +27,12 @@ data:extend{
     filename = "__core__/graphics/icons/mip/move-tag.png",
     size = 32,
     invert_colors = true,
+  },
+
+  {
+    type = "custom-input",
+    name = constants.input_toggle_display,
+    key_sequence = "CONTROL + TAB",
   },
 
   -- As a workaround for the absence of an on_player_zoom event, we listen on the zoom in and out controls being pressed
