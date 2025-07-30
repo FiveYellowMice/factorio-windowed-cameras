@@ -87,6 +87,9 @@ function CameraWindow:create(player)
     position = player.position,
     surface_index = player.surface_index,
     zoom = player.zoom,
+    tags = {
+      on_click = "toggle_editing",
+    },
   }
 
   return instance
