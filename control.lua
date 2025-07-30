@@ -33,7 +33,6 @@ script.on_event(defines.events.on_lua_shortcut, function(event)
   if not player then return end
 
   CameraWindow:create(player)
-  storage.players[player.index].is_editing_camera = true -- temporary
 end)
 
 -- Handle button clicks
@@ -45,7 +44,7 @@ script.on_event(defines.events.on_gui_click, function(event)
 
   -- Call the method given by name in the on_click tag of the element
   local on_click_method_name = event.element.tags.on_click
-  if on_click_method_name or on_click_method_name ~= "" then
+  if on_click_method_name and on_click_method_name ~= "" then
     camera_window[on_click_method_name](camera_window)
   end
 end)
@@ -73,6 +72,26 @@ end
 script.on_event(defines.events.on_player_changed_position, player_move_zoom_handler)
 script.on_event(constants.input_zoom_in, player_move_zoom_handler)
 script.on_event(constants.input_zoom_out, player_move_zoom_handler)
+
+-- Handle player exiting remote view
+script.on_event(defines.events.on_player_controller_changed, function(event)
+  -- Only relavant when the player is editing a camera
+  if not storage.players[event.player_index].is_editing_camera then return end
+
+  local player = game.get_player(event.player_index)
+  if not player then return end
+
+  -- Exiting remote view
+  if event.old_type ~= defines.controllers.remote then return end
+
+  local camera_window = CameraWindow:get_editing(player)
+  if not camera_window then
+    storage.players[player.index].is_editing_camera = false
+    return
+  end
+
+  camera_window:end_editing()
+end)
 
 -- Handle display changes
 script.on_event(defines.events.on_player_display_scale_changed, function(event)

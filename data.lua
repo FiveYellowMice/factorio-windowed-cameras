@@ -19,6 +19,14 @@ data:extend{
     action = "lua",
   },
 
+  {
+    type = "sprite",
+    name = constants.sprite_edit_camera,
+    filename = "__core__/graphics/icons/mip/move-tag.png",
+    size = 32,
+    invert_colors = true,
+  },
+
   -- As a workaround for the absence of an on_player_zoom event, we listen on the zoom in and out controls being pressed
   {
     type = "custom-input",
