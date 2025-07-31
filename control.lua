@@ -18,9 +18,6 @@ script.on_event(defines.events.on_player_created, function(event)
 end)
 
 script.on_event(defines.events.on_player_removed, function(event)
-  if not storage.players then
-    storage.players = {}
-  end
   storage.players[event.player_index] = nil
 end)
 
@@ -86,8 +83,23 @@ local function player_move_zoom_handler(event)
 end
 script.on_event(defines.events.on_player_changed_position, player_move_zoom_handler)
 script.on_event(defines.events.on_player_changed_surface, player_move_zoom_handler)
-script.on_event(constants.input_zoom_in, player_move_zoom_handler)
-script.on_event(constants.input_zoom_out, player_move_zoom_handler)
+
+---@param event EventData.CustomInputEvent
+local function zoom_input_handler(event)
+  -- Only relavant when the player is editing a camera
+  if not storage.players[event.player_index].is_editing_camera then return end
+
+  -- As a workaround for the absence of an on_player_zoom event, we listen on the zoom in and out
+  -- controls being pressed.
+  -- But custom input handlers are invoked before the game actually processes the zooming action,
+  -- so we delay our processing of the event to the next tick.
+  script.on_nth_tick(1, function()
+    player_move_zoom_handler(event)
+    script.on_nth_tick(1, nil)
+  end)
+end
+script.on_event(constants.input_zoom_in, zoom_input_handler)
+script.on_event(constants.input_zoom_out, zoom_input_handler)
 
 -- Handle player exiting remote view
 script.on_event(defines.events.on_player_controller_changed, function(event)
