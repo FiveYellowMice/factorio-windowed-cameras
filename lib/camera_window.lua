@@ -21,14 +21,17 @@ function CameraWindow:create(player, reference)
 
   local instance = setmetatable({}, self)
 
-  -- Find the largest ordinal of existing windows, the new window will have an ordinal of that + 1
-  local n_window = 0
+  -- Find the smallest ordinal that isn't taken by any existing window
+  local existing_ordinals = {}
   for _, gui_element in ipairs(player.gui.screen.children) do
     if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
-      n_window = math.max(n_window, tonumber(gui_element.tags.ordinal) or 0)
+      existing_ordinals[tonumber(gui_element.tags.ordinal)] = true
     end
   end
-  local window_ordinal = n_window + 1
+  local window_ordinal = 1
+  while existing_ordinals[window_ordinal] do
+    window_ordinal = window_ordinal + 1
+  end
 
   instance.window = player.gui.screen.add{
     type = "frame",
