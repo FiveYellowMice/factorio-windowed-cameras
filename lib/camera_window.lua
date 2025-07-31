@@ -2,6 +2,7 @@
 
 local constants = require('lib/constants.lua')
 local util = require('util')
+local CameraWindowMenu = require('lib/camera_window_menu.lua')
 
 ---@class CameraWindow
 ---@field window LuaGuiElement
@@ -24,7 +25,7 @@ function CameraWindow:create(player, reference)
   -- Find the smallest ordinal that isn't taken by any existing window
   local existing_ordinals = {}
   for _, gui_element in ipairs(player.gui.screen.children) do
-    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
+    if gui_element.valid and util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
       existing_ordinals[tonumber(gui_element.tags.ordinal)] = true
     end
   end
@@ -85,6 +86,17 @@ function CameraWindow:create(player, reference)
   }
   header_flow.add{
     type = "sprite-button",
+    style = "frame_action_button",
+    name = constants.camera_window_menu_button_name,
+    sprite = constants.sprite_menu_button,
+    tooltip = {"windowed-cameras.menu-button-title"},
+    mouse_button_filter = {"left"},
+    tags = {
+      on_click = "toggle_menu",
+    },
+  }
+  header_flow.add{
+    type = "sprite-button",
     style = "close_button",
     name = constants.close_button_name,
     sprite = "utility/close",
@@ -128,6 +140,29 @@ function CameraWindow:from(element)
   }, self)
 end
 
+---Find the corresponding window of a CameraWindowMenu
+---@param menu CameraWindowMenu
+---@return CameraWindow?
+function CameraWindow:for_menu(menu)
+  local player = game.get_player(menu.frame.player_index)
+  if not player then return nil end
+
+  local window = nil
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
+      if gui_element.tags.ordinal == menu.frame.tags.ordinal then
+        window = gui_element
+        break
+      end
+    end
+  end
+  if not window then return nil end
+  
+  return setmetatable({
+    window = window,
+  }, self)
+end
+
 ---Find the CameraWindow that is currently being edited.
 ---@return CameraWindow?
 function CameraWindow:get_editing(player)
@@ -161,7 +196,7 @@ function CameraWindow:set_all_visible(player, visible)
 
   local count = 0
   for _, gui_element in ipairs(player.gui.screen.children) do
-    local camera_window = CameraWindow:from(gui_element)
+    local camera_window = gui_element.valid and CameraWindow:from(gui_element)
     if camera_window then
       count = count + 1
       camera_window:set_visible(visible)
@@ -180,7 +215,7 @@ function CameraWindow:raise_window_closed(player_index)
 
   local remaining = false
   for _, gui_element in ipairs(player.gui.screen.children) do
-    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
+    if gui_element.valid and util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
       remaining = true
       break
     end
@@ -203,10 +238,15 @@ function prototype:get_edit_button()
   return self.window.children[1][constants.camera_edit_button_name]
 end
 
+function prototype:get_menu_button()
+  return self.window.children[1][constants.camera_window_menu_button_name]
+end
+
 function prototype:destroy()
   local player_index = self.window.player_index
 
   self:end_editing()
+  self:close_menu()
   self.window.destroy()
 
   getmetatable(self):raise_window_closed(player_index)
@@ -218,6 +258,9 @@ end
 
 ---@param visible boolean
 function prototype:set_visible(visible)
+  if not visible then
+    self:close_menu()
+  end
   self.window.visible = visible
 end
 
@@ -257,7 +300,7 @@ function prototype:begin_editing()
 
   -- Hide other windows
   for _, gui_element in ipairs(player.gui.screen.children) do
-    local other = CameraWindow:from(gui_element)
+    local other = gui_element.valid and CameraWindow:from(gui_element)
     if other and other ~= self then
       other:set_visible(false)
     end
@@ -288,7 +331,7 @@ function prototype:end_editing()
 
   -- Show other windows
   for _, gui_element in ipairs(player.gui.screen.children) do
-    local other = CameraWindow:from(gui_element)
+    local other = gui_element.valid and CameraWindow:from(gui_element)
     if other and other ~= self then
       other:set_visible(true)
     end
@@ -307,4 +350,21 @@ function prototype:set_view_from_player(player)
   camera.zoom = player.zoom
 end
 
+function prototype:toggle_menu()
+  local menu = CameraWindowMenu:for_window(self)
+  if not menu then
+    CameraWindowMenu:create(self)
+  else
+    menu:destroy()
+  end
+end
+
+function prototype:close_menu()
+  local menu = CameraWindowMenu:for_window(self)
+  if menu then
+    menu:destroy()
+  end
+end
+
+CameraWindowMenu.set_window_module(CameraWindow)
 return CameraWindow

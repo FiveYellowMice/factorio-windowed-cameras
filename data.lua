@@ -28,6 +28,12 @@ data:extend{
     size = 32,
     invert_colors = true,
   },
+  {
+    type = "sprite",
+    name = constants.sprite_menu_button,
+    filename = "__core__/graphics/icons/mip/expand-panel-white.png",
+    size = 64,
+  },
 
   {
     type = "custom-input",
@@ -70,4 +76,9 @@ style[constants.style_prefix.."camera_window_camera_view"] = {
   type = "camera_style",
   horizontally_stretchable = "on",
   vertically_stretchable = "on",
+}
+style[constants.style_prefix.."camera_window_menu_frame"] = {
+  type = "frame_style",
+  padding = 8,
+  use_header_filler = false,
 }
