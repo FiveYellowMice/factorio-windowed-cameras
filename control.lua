@@ -46,6 +46,18 @@ script.on_event(defines.events.on_lua_shortcut, function(event)
 end)
 script.on_event(constants.input_toggle_display, shortcut_handler)
 
+-- Handle window closing
+---@param event CameraWindowClosedData
+script.on_event(CameraWindow.event_window_closed, function(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
+
+  -- Treat the shortcut as toggled off when there are no more windows remaining
+  if not event.remaining then
+    player.set_shortcut_toggled(constants.shortcut_toggle_display_name, false)
+  end
+end)
+
 -- Handle button clicks
 script.on_event(defines.events.on_gui_click, function(event)
   if not util.string_starts_with(event.element.name, constants.gui_name_prefix) then return end

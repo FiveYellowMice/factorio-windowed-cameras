@@ -120,9 +120,9 @@ function CameraWindow:from(element)
     if not element then return nil end
   end
 
-  local instance = setmetatable({}, self)
-  instance.window = element
-  return instance
+  return setmetatable({
+    window = element,
+  }, self)
 end
 
 ---Find the CameraWindow that is currently being edited.
@@ -139,9 +139,9 @@ function CameraWindow:get_editing(player)
   end
   if not window then return nil end
 
-  local instance = setmetatable({}, self)
-  instance.window = window
-  return instance
+  return setmetatable({
+    window = window,
+  }, self)
 end
 
 function CameraWindow.__eq(a, b)
@@ -167,6 +167,31 @@ function CameraWindow:set_all_visible(player, visible)
   return count
 end
 
+---An event raised when a camera window has been closed.
+CameraWindow.event_window_closed = script.generate_event_name()
+---@package
+---@param player_index integer
+function CameraWindow:raise_window_closed(player_index)
+  local player = game.get_player(player_index)
+  if not player then return end
+
+  local remaining = false
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
+      remaining = true
+      break
+    end
+  end
+
+  ---@class CameraWindowClosedData
+  local event = {
+    player_index = player_index,
+    ---Whether there are camera windows remaining open afterwards.
+    remaining = remaining,
+  }
+  script.raise_event(self.event_window_closed, event)
+end
+
 function prototype:get_camera()
   return self.window.children[2][constants.cemera_view_name]
 end
@@ -176,8 +201,12 @@ function prototype:get_edit_button()
 end
 
 function prototype:destroy()
+  local player_index = self.window.player_index
+
   self:end_editing()
   self.window.destroy()
+
+  getmetatable(self):raise_window_closed(player_index)
 end
 
 function prototype:is_visible()
