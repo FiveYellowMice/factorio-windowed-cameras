@@ -1,24 +1,23 @@
 local constants = require("lib/constants.lua")
 local util = require("util")
+local PlayerData = require('lib/player_data.lua')
 local CameraWindow = require("lib.camera_window")
 
 
----@class PlayerData
----@field is_editing_camera boolean Whether the player is editing a camera. This is just for quickly exiting in event handlers, the canonical way to check is `CameraWindow:get_editing()`.
+local PlayerData_map_metatable = PlayerData.map_metatable
+script.register_metatable("PlayerData_map_metatable", PlayerData_map_metatable)
+script.register_metatable("PlayerData", PlayerData)
 
 script.on_init(function()
-  ---@type PlayerData[]
-  storage.players = {}
+  PlayerData:on_init()
 end)
 
 script.on_event(defines.events.on_player_created, function(event)
-  storage.players[event.player_index] = {
-    is_editing_camera = false,
-  }
+  PlayerData:on_player_created(event)
 end)
 
 script.on_event(defines.events.on_player_removed, function(event)
-  storage.players[event.player_index] = nil
+  PlayerData:on_player_removed(event)
 end)
 
 
