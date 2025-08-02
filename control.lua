@@ -60,21 +60,31 @@ script.on_event(CameraWindow.event_window_closed, function(event)
 end)
 
 -- Handle GUI interactions
----@param event EventData.on_gui_click
+local event_handler_tag_map = {
+  [defines.events.on_gui_click] = "on_click",
+  [defines.events.on_gui_value_changed] = "on_value_changed",
+  [defines.events.on_gui_text_changed] = "on_text_changed",
+}
+---@param event
+---| EventData.on_gui_click
+---| EventData.on_gui_value_changed
+---| EventData.on_gui_text_changed
 local function gui_interaction_handler(event)
-  if not util.string_starts_with(event.element.name, constants.gui_name_prefix) then return end
+  if not event.element.tags[constants.gui_tag_event_enabled] then return end
 
   local object = CameraWindow:from(event.element) or CameraWindowMenu:from(event.element)
   if not object then return end
-  
 
   -- Call the method given by name in the on_* tags of the element
-  local on_click_method_name = event.element.tags.on_click
-  if on_click_method_name and on_click_method_name ~= "" then
-    object[on_click_method_name](object)
+  local tag_name = event_handler_tag_map[event.name]
+  local method_name = event.element.tags[tag_name]
+  if method_name and method_name ~= "" then
+    object[method_name](object)
   end
 end
 script.on_event(defines.events.on_gui_click, gui_interaction_handler)
+script.on_event(defines.events.on_gui_value_changed, gui_interaction_handler)
+script.on_event(defines.events.on_gui_text_changed, gui_interaction_handler)
 
 -- Handle remote view movement & zoom
 ---@param event EventData.on_player_changed_position | EventData.on_player_changed_surface | EventData.CustomInputEvent

@@ -65,44 +65,48 @@ function CameraWindow:create(player, reference)
   header_flow.add{
     type = "sprite-button",
     style = "frame_action_button",
-    name = constants.clone_button_name,
+    name = "clone-button",
     sprite = "utility/add_white",
     tooltip = {"windowed-cameras.clone-button-title"},
     mouse_button_filter = {"left"},
     tags = {
+      [constants.gui_tag_event_enabled] = true,
       on_click = "clone",
     },
   }
   header_flow.add{
     type = "sprite-button",
     style = "frame_action_button",
-    name = constants.camera_edit_button_name,
+    name = "edit-button",
     sprite = constants.sprite_edit_camera,
     tooltip = {"windowed-cameras.edit-button-title"},
     mouse_button_filter = {"left"},
     tags = {
+      [constants.gui_tag_event_enabled] = true,
       on_click = "toggle_editing",
     },
   }
   header_flow.add{
     type = "sprite-button",
     style = "frame_action_button",
-    name = constants.camera_window_menu_button_name,
+    name = "menu-button",
     sprite = constants.sprite_menu_button,
     tooltip = {"windowed-cameras.menu-button-title"},
     mouse_button_filter = {"left"},
     tags = {
+      [constants.gui_tag_event_enabled] = true,
       on_click = "toggle_menu",
     },
   }
   header_flow.add{
     type = "sprite-button",
     style = "close_button",
-    name = constants.close_button_name,
+    name = "close-button",
     sprite = "utility/close",
     tooltip = {"gui.close"},
     mouse_button_filter = {"left"},
     tags = {
+      [constants.gui_tag_event_enabled] = true,
       on_click = "destroy",
     },
   }
@@ -113,12 +117,13 @@ function CameraWindow:create(player, reference)
   }
   content_flow.add{
     type = "camera",
-    name = constants.cemera_view_name,
+    name = "camera-view",
     style = constants.style_prefix.."camera_window_camera_view",
     position = reference.position,
     surface_index = reference.surface_index,
     zoom = reference.zoom,
     tags = {
+      [constants.gui_tag_event_enabled] = true,
       on_click = "toggle_editing",
     },
   }
@@ -231,15 +236,15 @@ function CameraWindow:raise_window_closed(player_index)
 end
 
 function prototype:get_camera()
-  return self.window.children[2][constants.cemera_view_name]
+  return self.window.children[2]["camera-view"]
 end
 
 function prototype:get_edit_button()
-  return self.window.children[1][constants.camera_edit_button_name]
+  return self.window.children[1]["edit-button"]
 end
 
 function prototype:get_menu_button()
-  return self.window.children[1][constants.camera_window_menu_button_name]
+  return self.window.children[1]["menu-button"]
 end
 
 function prototype:destroy()

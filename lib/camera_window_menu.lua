@@ -38,56 +38,48 @@ function CameraWindowMenu:create(window)
 
   local table = menu.add{
     type = "table",
+    name = "table",
     style = "player_input_table",
     column_count = 2,
   }
 
-  table.add{
-    type = "label",
-    caption = {"windowed-cameras.width-slider-title"},
-  }
-  local width_flow = table.add{
-    type = "flow",
-    style = "player_input_horizontal_flow",
-    direction = "horizontal",
-  }
-  width_flow.add{
-    type = "slider",
-    minimum_value = constants.camera_window_size_minimum,
-    maximum_value = player.display_resolution.width,
-  }
-  width_flow.add{
-    type = "textfield",
-    style = "slider_value_textfield",
-    text = "0",
-    numeric = true,
-    allow_decimal = false,
-    allow_negative = false,
-  }
+  for _, dimension in ipairs{"width", "height"} do
+    table.add{
+      type = "label",
+      caption = {"windowed-cameras."..dimension.."-slider-label"},
+    }
+    local flow = table.add{
+      type = "flow",
+      name = dimension,
+      style = "player_input_horizontal_flow",
+      direction = "horizontal",
+    }
+    flow.add{
+      type = "slider",
+      name = "slider",
+      minimum_value = constants.camera_window_size_minimum,
+      maximum_value = player.display_resolution[dimension],
+      tags = {
+        [constants.gui_tag_event_enabled] = true,
+        on_value_changed = "handle_slider_changed",
+      },
+    }
+    flow.add{
+      type = "textfield",
+      name = "textfield",
+      style = "slider_value_textfield",
+      text = "0",
+      numeric = true,
+      allow_decimal = false,
+      allow_negative = false,
+      tags = {
+        [constants.gui_tag_event_enabled] = true,
+        on_text_changed = "handle_slider_text_changed",
+      },
+    }
+  end
 
-  table.add{
-    type = "label",
-    caption = {"windowed-cameras.height-slider-title"},
-  }
-  local height_flow = table.add{
-    type = "flow",
-    style = "player_input_horizontal_flow",
-    direction = "horizontal",
-  }
-  height_flow.add{
-    type = "slider",
-    minimum_value = constants.camera_window_size_minimum,
-    maximum_value = player.display_resolution.height,
-  }
-  height_flow.add{
-    type = "textfield",
-    style = "slider_value_textfield",
-    text = "0",
-    numeric = true,
-    allow_decimal = false,
-    allow_negative = false,
-  }
-
+  -- Place the menu just below the menu button
   menu.location = {
     x = window.window.location.x + (window.window.style.minimal_width - 68) * player.display_scale,
     y = window.window.location.y + 40 * player.display_scale,
@@ -144,6 +136,27 @@ function prototype:destroy()
 
   if window then
     window:get_menu_button().toggled = false
+  end
+end
+
+function prototype:handle_slider_changed()
+  for _, dimension in ipairs{"width", "height"} do
+    local slider = self.frame["table"][dimension]["slider"] ---@type LuaGuiElement
+    local textfield = self.frame["table"][dimension]["textfield"] ---@type LuaGuiElement
+
+    textfield.text = tostring(slider.slider_value)
+  end
+end
+
+function prototype:handle_slider_text_changed()
+  for _, dimension in ipairs{"width", "height"} do
+    local slider = self.frame["table"][dimension]["slider"] ---@type LuaGuiElement
+    local textfield = self.frame["table"][dimension]["textfield"] ---@type LuaGuiElement
+
+    local number = tonumber(textfield.text) or 0
+    if number >= slider.get_slider_minimum() and number <= slider.get_slider_maximum() then
+      slider.slider_value = number
+    end
   end
 end
 
