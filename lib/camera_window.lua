@@ -15,7 +15,8 @@ local CameraWindow = {
 ---Create a new camera window.
 ---@param player LuaPlayer
 ---@param reference (LuaPlayer | LuaGuiElement)? Reference to set initial position/zoom/surface from.
-function CameraWindow:create(player, reference)
+---@param size [integer, integer]? Width and height of the window.
+function CameraWindow:create(player, reference, size)
   if not reference then
     reference = player
   end
@@ -43,7 +44,11 @@ function CameraWindow:create(player, reference)
       editing = false,
     },
   }
-  instance.window.style.size = constants.camera_window_size_default
+  if size then
+    instance.window.style.size = size
+  else
+    instance.window.style.size = constants.camera_window_size_default
+  end
 
   local header_flow = instance.window.add{
     type = "flow",
@@ -275,7 +280,7 @@ function prototype:clone()
   local player = game.get_player(self.window.player_index)
   if not player then return end
 
-  local new_window = CameraWindow:create(player, self:get_camera())
+  local new_window = CameraWindow:create(player, self:get_camera(), self:get_size())
   -- Offset the new window a little
   new_window.window.location = {self.window.location.x + 20, self.window.location.y + 20}
   return new_window
