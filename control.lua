@@ -148,3 +148,11 @@ script.on_event(defines.events.on_player_controller_changed, function(event)
 
   camera_window:end_editing()
 end)
+
+-- Handle display resolution and scale change
+---@param event EventData.on_player_display_resolution_changed | EventData.on_player_display_scale_changed
+local function display_resolution_scale_change_handler(event)
+  CameraWindowMenu:on_display_resolution_scale_changed(event)
+end
+script.on_event(defines.events.on_player_display_resolution_changed, display_resolution_scale_change_handler)
+script.on_event(defines.events.on_player_display_scale_changed, display_resolution_scale_change_handler)

@@ -59,7 +59,7 @@ function CameraWindowMenu:create(window)
       type = "slider",
       name = "slider",
       minimum_value = constants.camera_window_size_minimum[dimension_i],
-      maximum_value = player.display_resolution[dimension] / player.display_scale,
+      maximum_value = window_size[dimension_i] + 1, --- to be changed by update_max_window_size()
       value_step = 1,
       value = window_size[dimension_i],
       tags = {
@@ -87,6 +87,7 @@ function CameraWindowMenu:create(window)
   }, self)
 
   instance:align_location_to_window(window)
+  instance:update_max_window_size()
 
   window:get_menu_button().toggled = true
 
@@ -130,6 +131,20 @@ function CameraWindowMenu:for_window(window)
   }, self)
 end
 
+---@param event EventData.on_player_display_resolution_changed | EventData.on_player_display_scale_changed
+function CameraWindowMenu:on_display_resolution_scale_changed(event)
+  local player = game.get_player(event.player_index)
+  if not player then return nil end
+
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    local camera_window_menu = CameraWindowMenu:from(gui_element)
+    if camera_window_menu then
+      camera_window_menu:align_location_to_window()
+      camera_window_menu:update_max_window_size()
+    end
+  end
+end
+
 function prototype:destroy()
   local window = CameraWindow:for_menu(self)
 
@@ -153,6 +168,25 @@ function prototype:align_location_to_window(window)
     x = window.window.location.x + (window.window.style.minimal_width - 68) * player.display_scale,
     y = window.window.location.y + 40 * player.display_scale,
   }
+end
+
+---Set the max value of window size sliders to match the screen size.
+function prototype:update_max_window_size()
+  local player = game.get_player(self.frame.player_index)
+  if not player then return end
+
+  for _, dimension in ipairs{"width", "height"} do
+    local slider = self.frame["table"][dimension]["slider"] ---@type LuaGuiElement
+    slider.set_slider_minimum_maximum(
+      slider.get_slider_minimum(),
+      player.display_resolution[dimension] / player.display_scale
+    )
+
+    -- To make the slider update its dragger location, we change the slider value to something else and back
+    local value = slider.slider_value
+    slider.slider_value = slider.get_slider_minimum()
+    slider.slider_value = value
+  end
 end
 
 function prototype:handle_slider_changed()
