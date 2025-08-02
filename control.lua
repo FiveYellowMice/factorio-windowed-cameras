@@ -64,11 +64,13 @@ local event_handler_tag_map = {
   [defines.events.on_gui_click] = "on_click",
   [defines.events.on_gui_value_changed] = "on_value_changed",
   [defines.events.on_gui_text_changed] = "on_text_changed",
+  [defines.events.on_gui_location_changed] = "on_location_changed",
 }
 ---@param event
 ---| EventData.on_gui_click
 ---| EventData.on_gui_value_changed
 ---| EventData.on_gui_text_changed
+---| EventData.on_gui_location_changed
 local function gui_interaction_handler(event)
   if not event.element.tags[constants.gui_tag_event_enabled] then return end
 
@@ -85,6 +87,7 @@ end
 script.on_event(defines.events.on_gui_click, gui_interaction_handler)
 script.on_event(defines.events.on_gui_value_changed, gui_interaction_handler)
 script.on_event(defines.events.on_gui_text_changed, gui_interaction_handler)
+script.on_event(defines.events.on_gui_location_changed, gui_interaction_handler)
 
 -- Handle remote view movement & zoom
 ---@param event EventData.on_player_changed_position | EventData.on_player_changed_surface | EventData.CustomInputEvent

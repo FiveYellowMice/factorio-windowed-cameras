@@ -82,17 +82,15 @@ function CameraWindowMenu:create(window)
     }
   end
 
-  -- Place the menu just below the menu button
-  menu.location = {
-    x = window.window.location.x + (window.window.style.minimal_width - 68) * player.display_scale,
-    y = window.window.location.y + 40 * player.display_scale,
-  }
+  local instance = setmetatable({
+    frame = menu,
+  }, self)
+
+  instance:align_location_to_window(window)
 
   window:get_menu_button().toggled = true
 
-  return setmetatable({
-    frame = menu,
-  }, self)
+  return instance
 end
 
 ---Obtain a CameraWindowMenu from a LuaGuiElement.
@@ -142,6 +140,21 @@ function prototype:destroy()
   end
 end
 
+---Place the menu just below the menu button of a window.
+---@param window? CameraWindow
+function prototype:align_location_to_window(window)
+  window = window or CameraWindow:for_menu(self)
+  if not window then return end
+
+  local player = game.get_player(self.frame.player_index)
+  if not player then return end
+
+  self.frame.location = {
+    x = window.window.location.x + (window.window.style.minimal_width - 68) * player.display_scale,
+    y = window.window.location.y + 40 * player.display_scale,
+  }
+end
+
 function prototype:handle_slider_changed()
   local window_size = {width = 0, height = 0}
 
@@ -177,7 +190,7 @@ function prototype:handle_slider_text_changed()
     else
       textfield.style = constants.style_prefix.."invalid_value_slider_value_textfield"
     end
-    
+
     window_size[dimension] = slider.slider_value
   end
 

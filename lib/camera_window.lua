@@ -42,6 +42,8 @@ function CameraWindow:create(player, reference, size)
     tags = {
       ordinal = window_ordinal,
       editing = false,
+      [constants.gui_tag_event_enabled] = true,
+      on_location_changed = "update_menu_location",
     },
   }
   if size then
@@ -397,6 +399,13 @@ function prototype:close_menu()
   local menu = CameraWindowMenu:for_window(self)
   if menu then
     menu:destroy()
+  end
+end
+
+function prototype:update_menu_location()
+  local menu = CameraWindowMenu:for_window(self)
+  if menu then
+    menu:align_location_to_window(self)
   end
 end
 
