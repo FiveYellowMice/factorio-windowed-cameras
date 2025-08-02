@@ -43,7 +43,7 @@ function CameraWindow:create(player, reference)
       editing = false,
     },
   }
-  instance.window.style.size = {400, 400}
+  instance.window.style.size = constants.camera_window_size_default
 
   local header_flow = instance.window.add{
     type = "flow",
@@ -279,6 +279,30 @@ function prototype:clone()
   -- Offset the new window a little
   new_window.window.location = {self.window.location.x + 20, self.window.location.y + 20}
   return new_window
+end
+
+---@return [integer, integer]
+function prototype:get_size()
+  return {self.window.style.minimal_width, self.window.style.minimal_height}
+end
+
+---Resize the window.
+---Anchoring to top right so that the menu button stays at the same place relative to the menu.
+---@param size [integer, integer]
+function prototype:set_size(size)
+  local player = game.get_player(self.window.player_index)
+  if not player then return end
+
+  local old_size = self:get_size()
+  local old_location = self.window.location --[[@as GuiLocation]]
+
+  self.window.style.width = size[1]
+  self.window.style.height = size[2]
+
+  self.window.location = {
+    x = old_location.x - (size[1] - old_size[1]) * player.display_scale,
+    y = old_location.y,
+  }
 end
 
 function prototype:is_editing()

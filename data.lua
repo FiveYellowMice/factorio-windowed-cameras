@@ -82,3 +82,9 @@ style[constants.style_prefix.."camera_window_menu_frame"] = {
   padding = 8,
   use_header_filler = false,
 }
+
+style[constants.style_prefix.."invalid_value_slider_value_textfield"] = {
+  type = "textbox_style",
+  parent = "invalid_value_short_number_textfield",
+  horizontal_align = "center",
+}

@@ -25,6 +25,7 @@ function CameraWindowMenu:create(window)
   if not player then return nil end
 
   local ordinal = window.window.tags.ordinal
+  local window_size = window:get_size()
 
   local menu = player.gui.screen.add{
     type = "frame",
@@ -43,7 +44,7 @@ function CameraWindowMenu:create(window)
     column_count = 2,
   }
 
-  for _, dimension in ipairs{"width", "height"} do
+  for dimension_i, dimension in ipairs{"width", "height"} do
     table.add{
       type = "label",
       caption = {"windowed-cameras."..dimension.."-slider-label"},
@@ -57,8 +58,10 @@ function CameraWindowMenu:create(window)
     flow.add{
       type = "slider",
       name = "slider",
-      minimum_value = constants.camera_window_size_minimum,
-      maximum_value = player.display_resolution[dimension],
+      minimum_value = constants.camera_window_size_minimum[dimension_i],
+      maximum_value = player.display_resolution[dimension] / player.display_scale,
+      value_step = 1,
+      value = window_size[dimension_i],
       tags = {
         [constants.gui_tag_event_enabled] = true,
         on_value_changed = "handle_slider_changed",
@@ -68,7 +71,7 @@ function CameraWindowMenu:create(window)
       type = "textfield",
       name = "textfield",
       style = "slider_value_textfield",
-      text = "0",
+      text = tostring(window_size[dimension_i]),
       numeric = true,
       allow_decimal = false,
       allow_negative = false,
@@ -140,23 +143,48 @@ function prototype:destroy()
 end
 
 function prototype:handle_slider_changed()
-  for _, dimension in ipairs{"width", "height"} do
+  local window_size = {width = 0, height = 0}
+
+  for dimension in pairs(window_size) do
     local slider = self.frame["table"][dimension]["slider"] ---@type LuaGuiElement
     local textfield = self.frame["table"][dimension]["textfield"] ---@type LuaGuiElement
 
+    -- Set text to slider value
     textfield.text = tostring(slider.slider_value)
+
+    window_size[dimension] = slider.slider_value
+  end
+
+  -- Resize the window
+  local window = CameraWindow:for_menu(self)
+  if window then
+    window:set_size{window_size.width, window_size.height}
   end
 end
 
 function prototype:handle_slider_text_changed()
-  for _, dimension in ipairs{"width", "height"} do
+  local window_size = {width = 0, height = 0}
+
+  for dimension in pairs(window_size) do
     local slider = self.frame["table"][dimension]["slider"] ---@type LuaGuiElement
     local textfield = self.frame["table"][dimension]["textfield"] ---@type LuaGuiElement
 
     local number = tonumber(textfield.text) or 0
+    -- Set slider value to text, or make textfield red if text is invalid
     if number >= slider.get_slider_minimum() and number <= slider.get_slider_maximum() then
+      textfield.style = "slider_value_textfield"
       slider.slider_value = number
+    else
+      textfield.style = constants.style_prefix.."invalid_value_slider_value_textfield"
     end
+    
+    window_size[dimension] = slider.slider_value
+  end
+
+  -- Resize the window
+  local window = CameraWindow:for_menu(self)
+  if window then
+    window:set_size{window_size.width, window_size.height}
   end
 end
 
