@@ -11,7 +11,7 @@ local PlayerData = {
 ---@return PlayerData
 function PlayerData:new()
   return setmetatable({
-    is_editing_camera = true,
+    is_editing_camera = false,
   }, self)
 end
 
