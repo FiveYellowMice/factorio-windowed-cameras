@@ -122,7 +122,7 @@ function CameraWindow:create(player, reference, size)
     type = "frame",
     style = "inside_shallow_frame"
   }
-  content_flow.add{
+  local camera = content_flow.add{
     type = "camera",
     name = "camera-view",
     style = constants.style_prefix.."camera_window_camera_view",
@@ -134,6 +134,12 @@ function CameraWindow:create(player, reference, size)
       on_click = "toggle_editing",
     },
   }
+
+  if reference.object_name == "LuaPlayer" then
+    camera.entity = reference.centered_on
+  elseif reference.object_name == "LuaGuiElement" then
+    camera.entity = reference.entity
+  end
 
   return instance
 end
@@ -326,7 +332,7 @@ end
 
 function prototype:begin_editing()
   if self.window.tags.editing then return end
-  
+
   local player = game.get_player(self.window.player_index)
   if not player then return end
 
@@ -350,6 +356,7 @@ function prototype:begin_editing()
     surface = camera.surface_index,
   }
   player.zoom = camera.zoom
+  player.centered_on = camera.entity
 
   self:get_edit_button().toggled = true
   self.window.tags = util.merge{self.window.tags, {editing = true}}
@@ -384,6 +391,7 @@ function prototype:set_view_from_player(player)
   camera.position = player.position
   camera.surface_index = player.surface_index
   camera.zoom = player.zoom
+  camera.entity = player.centered_on
 end
 
 function prototype:toggle_menu()
