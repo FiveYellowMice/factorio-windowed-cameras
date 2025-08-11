@@ -1,5 +1,5 @@
 local constants = require("lib/constants.lua")
-local util = require("util")
+local migrations = require("lib/migrations.lua")
 local PlayerData = require('lib/player_data.lua')
 local CameraWindow = require("lib/camera_window.lua")
 local CameraWindowMenu = require('lib/camera_window_menu.lua')
@@ -19,6 +19,10 @@ end)
 
 script.on_event(defines.events.on_player_removed, function(event)
   PlayerData:on_player_removed(event)
+end)
+
+script.on_configuration_changed(function(event)
+  migrations.on_configuration_changed(event)
 end)
 
 

@@ -74,7 +74,7 @@ function CameraWindow:create(player, reference, size)
     style = "frame_action_button",
     name = "clone-button",
     sprite = "utility/add_white",
-    tooltip = {"windowed-cameras.clone-button-title"},
+    tooltip = {"windowed-cameras.clone-button-tooltip"},
     mouse_button_filter = {"left"},
     tags = {
       [constants.gui_tag_event_enabled] = true,
@@ -86,7 +86,7 @@ function CameraWindow:create(player, reference, size)
     style = "frame_action_button",
     name = "edit-button",
     sprite = constants.sprite_edit_camera,
-    tooltip = {"windowed-cameras.edit-button-title"},
+    tooltip = {"windowed-cameras.edit-button-tooltip"},
     mouse_button_filter = {"left"},
     tags = {
       [constants.gui_tag_event_enabled] = true,
@@ -98,7 +98,7 @@ function CameraWindow:create(player, reference, size)
     style = "frame_action_button",
     name = "menu-button",
     sprite = constants.sprite_menu_button,
-    tooltip = {"windowed-cameras.menu-button-title"},
+    tooltip = {"windowed-cameras.menu-button-tooltip"},
     mouse_button_filter = {"left"},
     tags = {
       [constants.gui_tag_event_enabled] = true,

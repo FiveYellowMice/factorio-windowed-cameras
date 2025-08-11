@@ -8,11 +8,11 @@ This Factorio mod allows you to create windowed cameras that view different part
 
 To get started, click the "Show/Hide windowed cameras" shortcut button on the bottom toolbar. That's the button with a video camera icon. Or press "Ctrl + Tab" (changeable in control settings). This gets your first windowed camera.
 
-Clicking the shortcut button again will hide your existing camera windows. To create a new camera, click the "+" button in the window.
+Clicking the shortcut button again will hide your existing camera windows. To create another camera, click the "+" button in the window.
 
 To move or zoom the camera, click on the "Move camera" button in the window, this opens remote view. This windowed camera will now follow the remote view. Go to where you want the camera to look at, then click "Move camera" again to finish. Clicking on the camera content does the same.
 
-The option to resize the camera window resides in the three-dots menu.
+The option to resize the camera window resides in the "More options" menu.
 
 ## Caveats
 
