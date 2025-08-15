@@ -36,6 +36,36 @@ data:extend{
   },
 
   {
+    type = "selection-tool",
+    name = constants.track_entity_selector_name,
+    stack_size = 1,
+    hidden = true,
+    flags = {
+      "not-stackable",
+      "only-in-cursor",
+      "spawnable",
+    },
+    icon = "__core__/graphics/icons/mip/brush-circle-shape.png",
+    icon_size = 32,
+    select = {
+      border_color = {1, 1, 1, 0},
+      cursor_box_type = "entity",
+      mode = "any-entity",
+    },
+    alt_select = {
+      border_color = {1, 1, 1, 0},
+      cursor_box_type = "entity",
+      mode = "any-entity",
+    },
+  },
+  {
+    type = "custom-input",
+    name = constants.input_select_entity,
+    key_sequence = "",
+    linked_game_control = "select-for-blueprint",
+  },
+
+  {
     type = "custom-input",
     name = constants.input_toggle_display,
     key_sequence = "CONTROL + TAB",
@@ -81,6 +111,10 @@ style[constants.style_prefix.."camera_window_menu_frame"] = {
   type = "frame_style",
   padding = 8,
   use_header_filler = false,
+  vertical_flow_style = {
+    type = "vertical_flow_style",
+    vertical_spacing = 8,
+  },
 }
 
 style[constants.style_prefix.."invalid_value_slider_value_textfield"] = {

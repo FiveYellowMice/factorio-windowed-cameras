@@ -158,6 +158,26 @@ function CameraWindow:from(element)
   }, self)
 end
 
+---Find the window with the given ordinal
+---@param player LuaPlayer
+---@param ordinal integer
+function CameraWindow:get(player, ordinal)
+  local window = nil
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
+      if gui_element.tags.ordinal == ordinal then
+        window = gui_element
+        break
+      end
+    end
+  end
+  if not window then return nil end
+
+  return setmetatable({
+    window = window,
+  }, self)
+end
+
 ---Find the corresponding window of a CameraWindowMenu
 ---@param menu CameraWindowMenu
 ---@return CameraWindow?
@@ -165,20 +185,7 @@ function CameraWindow:for_menu(menu)
   local player = game.get_player(menu.frame.player_index)
   if not player then return nil end
 
-  local window = nil
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
-      if gui_element.tags.ordinal == menu.frame.tags.ordinal then
-        window = gui_element
-        break
-      end
-    end
-  end
-  if not window then return nil end
-  
-  return setmetatable({
-    window = window,
-  }, self)
+  return self:get(player, menu.frame.tags.ordinal --[[@as integer]])
 end
 
 ---Find the CameraWindow that is currently being edited.
@@ -372,6 +379,11 @@ function prototype:end_editing()
   -- Close remote view
   player.exit_remote_view()
 
+  -- Clear entity selector
+  if player.cursor_stack.valid_for_read and player.cursor_stack.name == constants.track_entity_selector_name then
+    player.cursor_stack.clear()
+  end
+
   -- Show other windows
   for _, gui_element in ipairs(player.gui.screen.children) do
     local other = gui_element.valid and CameraWindow:from(gui_element)
@@ -392,6 +404,46 @@ function prototype:set_view_from_player(player)
   camera.surface_index = player.surface_index
   camera.zoom = player.zoom
   camera.entity = player.centered_on
+end
+
+---@param entity LuaEntity?
+---@return boolean success
+function prototype:select_tracked_entity(entity)
+  local player = game.get_player(self.window.player_index)
+  if not player then return false end
+
+  if not entity then
+    player.create_local_flying_text{
+      text = {"windowed-cameras.track-entity-selection-empty-message"},
+      create_at_cursor = true,
+    }
+    return false
+  end
+
+  if entity.force_index ~= player.force_index then
+    player.create_local_flying_text{
+      text = {"windowed-cameras.track-entity-selection-force-differ-message"},
+      create_at_cursor = true,
+    }
+    return false
+  end
+
+  -- Selecting tracked entity may happen in or outside of editing mode, we handle both
+  if self:is_editing() then
+    player.centered_on = entity
+    self:set_view_from_player(player)
+  else
+    local camera = self:get_camera()
+    camera.entity = entity
+    camera.zoom = player.zoom
+  end
+
+  player.create_local_flying_text{
+    text = {"windowed-cameras.track-entity-selection-success-message", entity.name_tag or entity.localised_name},
+    create_at_cursor = true,
+  }
+
+  return true
 end
 
 function prototype:toggle_menu()

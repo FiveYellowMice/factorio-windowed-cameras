@@ -82,6 +82,23 @@ function CameraWindowMenu:create(window)
     }
   end
 
+  local buttons_flow = menu.add{
+    type = "flow",
+    name = "buttons",
+    direction = "horizontal",
+  }
+  buttons_flow.add{
+    type = "button",
+    name = "track-entity-button",
+    caption = {"windowed-cameras.track-entity-button-caption"},
+    tooltip = {"windowed-cameras.track-entity-button-tooltip"},
+    mouse_button_filter = {"left"},
+    tags = {
+      [constants.gui_tag_event_enabled] = true,
+      on_click = "handle_track_entity_clicked",
+    }
+  }
+
   local instance = setmetatable({
     frame = menu,
   }, self)
@@ -233,6 +250,28 @@ function prototype:handle_slider_text_changed()
   if window then
     window:set_size{window_size.width, window_size.height}
   end
+end
+
+function prototype:handle_track_entity_clicked()
+  local player = game.get_player(self.frame.player_index)
+  if not player then return end
+
+  -- Give the player an entity selection tool.
+  -- Do not begin editing, as the way to end editing may be confusing without prior establishment.
+  local ret = player.cursor_stack.set_stack(constants.track_entity_selector_name)
+  if not ret then
+    -- The API doc says `set_stack` may fail, but it is not clear when it would fail.
+    -- So just show a generic error message.
+    player.create_local_flying_text{
+      text = {"windowed-cameras.track-entity-give-selector-failed-messsage"},
+      create_at_cursor = true,
+    }
+    return
+  end
+  player.cursor_stack.label = tostring(self.frame.tags.ordinal)
+
+  -- Close the menu.
+  self:destroy()
 end
 
 return CameraWindowMenu

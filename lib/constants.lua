@@ -8,11 +8,14 @@ constants.style_prefix = string.gsub(constants.mod_name, "-", "_").."_"
 
 constants.shortcut_toggle_display_name = constants.mod_name.."-toggle-display"
 constants.input_toggle_display = constants.mod_name.."-toggle-display"
-constants.input_zoom_in = "zoom-in"
-constants.input_zoom_out = "zoom-out"
+constants.input_zoom_in = constants.mod_name.."-zoom-in"
+constants.input_zoom_out = constants.mod_name.."-zoom-out"
+constants.input_select_entity = constants.mod_name.."-select-entity"
 
 constants.sprite_edit_camera = constants.mod_name.."-edit-camera"
 constants.sprite_menu_button = constants.mod_name.."-menu-button"
+
+constants.track_entity_selector_name = constants.mod_name.."-track-entity-selector"
 
 constants.camera_window_name_prefix = constants.mod_name.."-camera-window-main-"
 constants.camera_window_menu_name_prefix = constants.mod_name.."-camera-window-menu-"

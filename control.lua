@@ -153,6 +153,32 @@ script.on_event(defines.events.on_player_controller_changed, function(event)
   camera_window:end_editing()
 end)
 
+-- Handle player selecting entity to track
+---@param event EventData.CustomInputEvent
+script.on_event(constants.input_select_entity, function(event)
+  local player = game.get_player(event.player_index)
+  if not player then return end
+
+  if not player.cursor_stack.valid_for_read or player.cursor_stack.name ~= constants.track_entity_selector_name then return end
+
+  -- A selection tool is intended for selecting an area which may contain multiple entities, but
+  -- we only want one, so we don't actually use its area selection functionality. Instead, we
+  -- are only interested in the singular entity under the cursor when the selection begins.
+  -- So we capture the input event before the selection begins, and cancel the selection
+  -- immediately so that the selection box never shows.
+  local entity = player.selected
+  player.clear_selection()
+
+  local window = CameraWindow:get(player, tonumber(player.cursor_stack.label)--[[@as integer]])
+  if not window then return end
+
+  local ret = window:select_tracked_entity(entity)
+
+  if ret then
+    player.cursor_stack.clear()
+  end
+end)
+
 -- Handle display resolution and scale change
 ---@param event EventData.on_player_display_resolution_changed | EventData.on_player_display_scale_changed
 local function display_resolution_scale_change_handler(event)
