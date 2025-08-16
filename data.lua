@@ -45,8 +45,8 @@ data:extend{
       "only-in-cursor",
       "spawnable",
     },
-    icon = "__core__/graphics/icons/mip/brush-circle-shape.png",
-    icon_size = 32,
+    icon = "__"..constants.mod_name.."__/graphics/icons/track-entity-selector-x56.png",
+    icon_size = 56,
     select = {
       border_color = {1, 1, 1, 0},
       cursor_box_type = "entity",

@@ -9,6 +9,7 @@
     "ignore": [
       ".gitignore",
       "thumbnail.xcf",
+      "graphics/icons/*.svg",
       "README.md",
       "LICENSE"
     ]
