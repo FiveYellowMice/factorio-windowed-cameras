@@ -1,0 +1,11 @@
+---------------------------------------------------------------------------------------------------
+Version: 0.3.0
+Date: 2025-05-27
+  Features:
+    - Add a remote interface for other mods and commands to operate with Windowed Cameras.
+
+---------------------------------------------------------------------------------------------------
+Version: 0.2.0
+Date: 2025-08-16
+  Features:
+    - Add the ability for a camera to track an entity.
