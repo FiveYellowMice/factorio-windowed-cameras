@@ -3,6 +3,7 @@ local migrations = require("lib/migrations.lua")
 local PlayerData = require('lib/player_data.lua')
 local CameraWindow = require("lib/camera_window.lua")
 local CameraWindowMenu = require('lib/camera_window_menu.lua')
+require('lib/remote.lua')
 
 
 local PlayerData_map_metatable = PlayerData.map_metatable

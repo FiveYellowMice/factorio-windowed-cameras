@@ -12,9 +12,15 @@ local CameraWindow = {
   __index = prototype,
 }
 
+---@class CameraViewSpec
+---@field position MapPosition? Position of the camera, defaults to (0, 0).
+---@field surface_index integer? Surface index of the camera, defaults to the surface the player is on.
+---@field zoom number? Zoom level of the camera, defaults to 0.75.
+---@field entity LuaEntity? If specified, keep this entity at the center of the camera, overrides `position` and `surface_index`.
+
 ---Create a new camera window.
 ---@param player LuaPlayer
----@param reference (LuaPlayer | LuaGuiElement)? Reference to set initial position/zoom/surface from.
+---@param reference (LuaPlayer | LuaGuiElement | CameraViewSpec)? Reference to set initial position/zoom/surface from.
 ---@param size [integer, integer]? Width and height of the window.
 function CameraWindow:create(player, reference, size)
   if not reference then
@@ -126,7 +132,7 @@ function CameraWindow:create(player, reference, size)
     type = "camera",
     name = "camera-view",
     style = constants.style_prefix.."camera_window_camera_view",
-    position = reference.position,
+    position = reference.position or player.position,
     surface_index = reference.surface_index,
     zoom = reference.zoom,
     tags = {
@@ -137,7 +143,7 @@ function CameraWindow:create(player, reference, size)
 
   if reference.object_name == "LuaPlayer" then
     camera.entity = reference.centered_on
-  elseif reference.object_name == "LuaGuiElement" then
+  else
     camera.entity = reference.entity
   end
 
@@ -307,9 +313,9 @@ function prototype:get_size()
 end
 
 ---Resize the window.
----Anchoring to top right so that the menu button stays at the same place relative to the menu.
 ---@param size [integer, integer]
-function prototype:set_size(size)
+---@param anchor "top-left" | "top-right" | nil
+function prototype:set_size(size, anchor)
   local player = game.get_player(self.window.player_index)
   if not player then return end
 
@@ -319,10 +325,12 @@ function prototype:set_size(size)
   self.window.style.width = size[1]
   self.window.style.height = size[2]
 
-  self.window.location = {
-    x = old_location.x - (size[1] - old_size[1]) * player.display_scale,
-    y = old_location.y,
-  }
+  if anchor == "top-right" then
+    self.window.location = {
+      x = old_location.x - (size[1] - old_size[1]) * player.display_scale,
+      y = old_location.y,
+    }
+  end
 end
 
 function prototype:is_editing()
@@ -395,6 +403,29 @@ function prototype:end_editing()
   self:get_edit_button().toggled = false
   self.window.tags = util.merge{self.window.tags, {editing = false}}
   storage.players[player.index].is_editing_camera = false
+end
+
+---Update the settings of the camera view, unspecified fields remain unchanged.
+---@param spec CameraViewSpec
+function prototype:update_view(spec)
+  local camera = self:get_camera()
+  local player = nil---@type LuaPlayer?
+  if self:is_editing() then
+    player = game.get_player(self.window.player_index)
+    if not player then return end
+  end
+
+  for _, field in ipairs{{"position"}, {"surface_index"}, {"zoom"}, {"entity", "centered_on"}} do
+    local spec_field = field[1]
+    local player_field = field[2] or field[1]
+
+    if spec[spec_field] then
+      camera[spec_field] = spec[spec_field]
+      if player then
+        player[player_field] = spec[spec_field]
+      end
+    end
+  end
 end
 
 ---@param player LuaPlayer

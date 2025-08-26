@@ -222,7 +222,8 @@ function prototype:handle_slider_changed()
   -- Resize the window
   local window = CameraWindow:for_menu(self)
   if window then
-    window:set_size{window_size.width, window_size.height}
+    -- Anchoring to top right so that the menu button stays at the same place relative to the menu
+    window:set_size({window_size.width, window_size.height}, "top-right")
   end
 end
 
@@ -248,7 +249,8 @@ function prototype:handle_slider_text_changed()
   -- Resize the window
   local window = CameraWindow:for_menu(self)
   if window then
-    window:set_size{window_size.width, window_size.height}
+    -- Anchoring to top right so that the menu button stays at the same place relative to the menu
+    window:set_size({window_size.width, window_size.height}, "top-right")
   end
 end
 
