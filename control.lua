@@ -14,16 +14,13 @@ script.on_init(function()
   PlayerData:on_init()
 end)
 
-script.on_event(defines.events.on_player_created, function(event)
-  PlayerData:on_player_created(event)
-end)
-
 script.on_event(defines.events.on_player_removed, function(event)
   PlayerData:on_player_removed(event)
 end)
 
 script.on_configuration_changed(function(event)
   migrations.on_configuration_changed(event)
+  PlayerData:on_configuration_changed(event)
 end)
 
 

@@ -16,9 +16,11 @@ function PlayerData:new()
 end
 
 PlayerData.map_metatable = {
-  __index = function()
-    -- Return a default value for a non-existing player index
-    return PlayerData:new()
+  __index = function(self, key)
+    -- Create a new value for a non-existing player index
+    local instance = PlayerData:new()
+    self[key] = instance
+    return instance
   end
 }
 
@@ -27,9 +29,14 @@ function PlayerData:on_init()
   storage.players = setmetatable({}, self.map_metatable)
 end
 
----@param event EventData.on_player_created
-function PlayerData:on_player_created(event)
-  storage.players[event.player_index] = self:new()
+---@param event ConfigurationChangedData
+function PlayerData:on_configuration_changed(event)
+  -- Remove dangling PlayerData had any been accidentally created
+  for player_index, _ in pairs(storage.players) do
+    if not game.get_player(player_index) then
+      storage.players[player_index] = nil
+    end
+  end
 end
 
 ---@param event EventData.on_player_removed
