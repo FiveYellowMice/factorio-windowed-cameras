@@ -388,8 +388,13 @@ function prototype:end_editing()
   player.exit_remote_view()
 
   -- Clear entity selector
-  if player.cursor_stack.valid_for_read and player.cursor_stack.name == constants.track_entity_selector_name then
-    player.cursor_stack.clear()
+  local cursor_stack = player.cursor_stack
+  if
+    cursor_stack and
+    cursor_stack.valid_for_read and
+    player.cursor_stack.name == constants.track_entity_selector_name
+  then
+    cursor_stack.clear()
   end
 
   -- Show other windows

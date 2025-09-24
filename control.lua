@@ -157,7 +157,14 @@ script.on_event(constants.input_select_entity, function(event)
   local player = game.get_player(event.player_index)
   if not player then return end
 
-  if not player.cursor_stack.valid_for_read or player.cursor_stack.name ~= constants.track_entity_selector_name then return end
+  local cursor_stack = player.cursor_stack
+  if
+    not cursor_stack or
+    not cursor_stack.valid_for_read or
+    cursor_stack.name ~= constants.track_entity_selector_name
+  then
+    return
+  end
 
   -- A selection tool is intended for selecting an area which may contain multiple entities, but
   -- we only want one, so we don't actually use its area selection functionality. Instead, we
@@ -167,13 +174,13 @@ script.on_event(constants.input_select_entity, function(event)
   local entity = player.selected
   player.clear_selection()
 
-  local window = CameraWindow:get(player, tonumber(player.cursor_stack.label)--[[@as integer]])
+  local window = CameraWindow:get(player, tonumber(cursor_stack.label)--[[@as integer]])
   if not window then return end
 
   local ret = window:select_tracked_entity(entity)
 
   if ret then
-    player.cursor_stack.clear()
+    cursor_stack.clear()
   end
 end)
 
