@@ -9,6 +9,9 @@ require('lib/remote.lua')
 script.register_metatable("PlayerData_map_metatable", PlayerData.map_metatable)
 script.register_metatable("PlayerData", PlayerData)
 
+CameraWindow.load_deps()
+CameraWindowMenu.load_deps()
+
 script.on_init(function()
   PlayerData:on_init()
 end)

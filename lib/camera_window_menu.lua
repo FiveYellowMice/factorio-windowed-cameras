@@ -2,6 +2,7 @@
 
 local constants = require('lib/constants.lua')
 local util = require('util')
+local CameraWindow ---@module "lib.camera_window"
 
 ---@class CameraWindowMenu
 ---@field frame LuaGuiElement
@@ -11,10 +12,9 @@ local CameraWindowMenu = {
   __index = prototype,
 }
 
----@module "lib.camera_window"
-local CameraWindow = nil
-function CameraWindowMenu.set_window_module(module)
-  CameraWindow = module
+
+function CameraWindowMenu.load_deps()
+  CameraWindow = require('lib/camera_window.lua')
 end
 
 ---Create a menu.

@@ -2,7 +2,7 @@
 
 local constants = require('lib/constants.lua')
 local util = require('util')
-local CameraWindowMenu = require('lib/camera_window_menu.lua')
+local CameraWindowMenu ---@module 'lib.camera_window_menu'
 
 ---@class CameraWindow
 ---@field window LuaGuiElement
@@ -17,6 +17,11 @@ local CameraWindow = {
 ---@field surface_index integer? Surface index of the camera, defaults to the surface the player is on.
 ---@field zoom number? Zoom level of the camera, defaults to 0.75.
 ---@field entity LuaEntity? If specified, keep this entity at the center of the camera, overrides `position` and `surface_index`.
+
+
+function CameraWindow.load_deps()
+  CameraWindowMenu = require('lib/camera_window_menu.lua')
+end
 
 ---Create a new camera window.
 ---@param player LuaPlayer
@@ -505,5 +510,4 @@ function prototype:update_menu_location()
   end
 end
 
-CameraWindowMenu.set_window_module(CameraWindow)
 return CameraWindow
