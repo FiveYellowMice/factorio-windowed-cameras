@@ -1,6 +1,6 @@
 {
   "name": "windowed-cameras",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "title": "Windowed Cameras",
   "author": "FiveYellowMice",
   "homepage": "https://github.com/FiveYellowMice/factorio-windowed-cameras",
@@ -11,8 +11,7 @@
       "thumbnail.xcf",
       "graphics/icons/*.svg",
       "doc/**/*",
-      "README.md",
-      "LICENSE"
+      "README.md"
     ]
   }
 }
