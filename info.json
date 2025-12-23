@@ -10,6 +10,7 @@
       ".gitignore",
       "thumbnail.xcf",
       "graphics/icons/*.svg",
+      "doc/**/*",
       "README.md",
       "LICENSE"
     ]

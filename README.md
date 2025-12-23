@@ -19,3 +19,7 @@ You may let the camera track the movement of an entity (e.g. vehicles, players).
 ## Caveats
 
 * Windowed cameras are able to look into areas without radar coverage.
+
+## API Reference
+
+A remote interface exists for creating and manipulating camera windows, see [doc/doc.md](https://github.com/FiveYellowMice/factorio-windowed-cameras/blob/master/doc/doc.md).

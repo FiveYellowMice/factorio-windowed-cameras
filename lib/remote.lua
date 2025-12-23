@@ -2,6 +2,7 @@
 
 local CameraWindow = require("lib/camera_window.lua")
 
+---@class remote.windowed-cameras
 local remote_interface = {}
 
 
