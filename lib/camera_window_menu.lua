@@ -260,24 +260,27 @@ function prototype:handle_track_entity_clicked()
 
   -- Give the player an entity selection tool.
   -- Do not begin editing, as the way to end editing may be confusing without prior establishment.
-  local ret = nil
-  if player.cursor_stack then
-    ret = player.cursor_stack.set_stack(constants.track_entity_selector_name)
-  end
-  if not ret then
-    -- cursor_stack may be nil for spectators or dead players, so we are unable to give an item to them.
-    -- The API doc also says `set_stack` may fail, but it is not clear when it would fail.
-    -- So just show a generic error message regardless.
-    player.create_local_flying_text{
-      text = {"windowed-cameras.track-entity-give-selector-failed-messsage"},
-      create_at_cursor = true,
-    }
-    return
-  end
+
+  -- Clear cursor to not destroy player's currently held item.
+  if not player.clear_cursor() then return end
+  -- cursor_stack may be nil for spectators or dead players, so we are unable to give an item to them.
+  if not player.cursor_stack then goto error end
+  -- The API doc says `set_stack` may fail, but it is not clear when it would fail.
+  -- So just show a generic error message regardless.
+  if not player.cursor_stack.set_stack(constants.track_entity_selector_name) then goto error end
+
   player.cursor_stack.label = tostring(self.frame.tags.ordinal)
 
   -- Close the menu.
   self:destroy()
+
+  do return end
+
+  ::error::
+  player.create_local_flying_text{
+    text = {"windowed-cameras.track-entity-give-selector-failed-message"},
+    create_at_cursor = true,
+  }
 end
 
 return CameraWindowMenu
