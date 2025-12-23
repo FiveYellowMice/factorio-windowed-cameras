@@ -6,8 +6,7 @@ local CameraWindowMenu = require('lib/camera_window_menu.lua')
 require('lib/remote.lua')
 
 
-local PlayerData_map_metatable = PlayerData.map_metatable
-script.register_metatable("PlayerData_map_metatable", PlayerData_map_metatable)
+script.register_metatable("PlayerData_map_metatable", PlayerData.map_metatable)
 script.register_metatable("PlayerData", PlayerData)
 
 script.on_init(function()
