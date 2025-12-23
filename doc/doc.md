@@ -1,16 +1,6 @@
 # API Reference
 
-## CameraViewSpec
-
-@*field* `position` MapPosition? — Position of the camera, defaults to (0, 0).
-
-@*field* `surface_index` integer? — Surface index of the camera, defaults to the surface the player is on.
-
-@*field* `zoom` number? — Zoom level of the camera, defaults to 0.75.
-
-@*field* `entity` LuaEntity? — If specified, keep this entity at the center of the camera, overrides `position` and `surface_index`.
-
-## remote.windowed-cameras
+## <a name="remote.windowed-cameras"></a>remote.windowed-cameras
 
 ### create
 
@@ -20,9 +10,9 @@ remote.call("windowed-cameras", "create", player, spec, size)
 
 Create a new camera window.
 
-@*param* `player` LuaPlayer — The player to create the camera window for.
+@*param* `player` [LuaPlayer](https://lua-api.factorio.com/stable/classes/LuaPlayer.html) — The player to create the camera window for.
 
-@*param* `spec` CameraViewSpec — Specifies what the camera looks at.
+@*param* `spec` [CameraViewSpec](#CameraViewSpec) — Specifies what the camera looks at.
 
 @*param* `size` [integer, integer]? — Size of the camera window frame.
 
@@ -36,7 +26,7 @@ remote.call("windowed-cameras", "destroy", player, ordinal)
 
 Destroy a camera window.
 
-@*param* `player` LuaPlayer — The player the camera window belongs to.
+@*param* `player` [LuaPlayer](https://lua-api.factorio.com/stable/classes/LuaPlayer.html) — The player the camera window belongs to.
 
 @*param* `ordinal` integer — The ordinal of the camera window.
 
@@ -48,11 +38,11 @@ remote.call("windowed-cameras", "update_view", player, ordinal, spec)
 
 Update the settings of a camera view, unspecified parameters are unchanged.
 
-@*param* `player` LuaPlayer — The player the camera window belongs to.
+@*param* `player` [LuaPlayer](https://lua-api.factorio.com/stable/classes/LuaPlayer.html) — The player the camera window belongs to.
 
 @*param* `ordinal` integer — The ordinal of the camera window.
 
-@*param* `spec` CameraViewSpec — Specifies what the camera looks at.
+@*param* `spec` [CameraViewSpec](#CameraViewSpec) — Specifies what the camera looks at.
 
 ### get_camera_element
 
@@ -62,7 +52,7 @@ remote.call("windowed-cameras", "get_camera_element", player, ordinal)
 
 Get the camera view LuaGuiElement in a window. It's best to treat the obtained element as read-only.
 
-@*param* `player` LuaPlayer — The player the camera window belongs to.
+@*param* `player` [LuaPlayer](https://lua-api.factorio.com/stable/classes/LuaPlayer.html) — The player the camera window belongs to.
 
 @*param* `ordinal` integer — The ordinal of the camera window.
 
@@ -76,7 +66,7 @@ remote.call("windowed-cameras", "get_window_frame", player, ordinal)
 
 Get the window frame LuaGuiElement of a camera window. It's best to treat the obtained element as read-only.
 
-@*param* `player` LuaPlayer — The player the camera window belongs to.
+@*param* `player` [LuaPlayer](https://lua-api.factorio.com/stable/classes/LuaPlayer.html) — The player the camera window belongs to.
 
 @*param* `ordinal` integer — The ordinal of the camera window.
 
@@ -90,7 +80,7 @@ remote.call("windowed-cameras", "get_window_size", player, ordinal)
 
 Get the size of a camera window.
 
-@*param* `player` LuaPlayer — The player the camera window belongs to.
+@*param* `player` [LuaPlayer](https://lua-api.factorio.com/stable/classes/LuaPlayer.html) — The player the camera window belongs to.
 
 @*param* `ordinal` integer — The ordinal of the camera window.
 
@@ -104,7 +94,7 @@ remote.call("windowed-cameras", "set_window_size", player, ordinal, size)
 
 Set the size of a camera window.
 
-@*param* `player` LuaPlayer — The player the camera window belongs to.
+@*param* `player` [LuaPlayer](https://lua-api.factorio.com/stable/classes/LuaPlayer.html) — The player the camera window belongs to.
 
 @*param* `ordinal` integer — The ordinal of the camera window.
 
@@ -118,11 +108,11 @@ remote.call("windowed-cameras", "get_window_location", player, ordinal)
 
 Get the location of a camera window on screen.
 
-@*param* `player` LuaPlayer — The player the camera window belongs to.
+@*param* `player` [LuaPlayer](https://lua-api.factorio.com/stable/classes/LuaPlayer.html) — The player the camera window belongs to.
 
 @*param* `ordinal` integer — The ordinal of the camera window.
 
-@*return* GuiLocation
+@*return* [GuiLocation](https://lua-api.factorio.com/stable/concepts/GuiLocation.html)
 
 ### set_window_location
 
@@ -132,9 +122,19 @@ remote.call("windowed-cameras", "set_window_location", player, ordinal, location
 
 Set the location of a camera window on screen.
 
-@*param* `player` LuaPlayer — The player the camera window belongs to.
+@*param* `player` [LuaPlayer](https://lua-api.factorio.com/stable/classes/LuaPlayer.html) — The player the camera window belongs to.
 
 @*param* `ordinal` integer — The ordinal of the camera window.
 
-@*param* `location` GuiLocation — The new location to set to.
+@*param* `location` [GuiLocation](https://lua-api.factorio.com/stable/concepts/GuiLocation.html) — The new location to set to.
+
+## <a name="CameraViewSpec"></a>CameraViewSpec
+
+@*field* `position` [MapPosition](https://lua-api.factorio.com/stable/concepts/MapPosition.html)? — Position of the camera, defaults to (0, 0).
+
+@*field* `surface_index` integer? — Surface index of the camera, defaults to the surface the player is on.
+
+@*field* `zoom` number? — Zoom level of the camera, defaults to 0.75.
+
+@*field* `entity` [LuaEntity](https://lua-api.factorio.com/stable/classes/LuaEntity.html)? — If specified, keep this entity at the center of the camera, overrides `position` and `surface_index`.
 
