@@ -22,4 +22,4 @@ You may let the camera track the movement of an entity (e.g. vehicles, players).
 
 ## API Reference
 
-A remote interface exists for creating and manipulating camera windows, see [doc/doc.md](https://github.com/FiveYellowMice/factorio-windowed-cameras/blob/master/doc/doc.md).
+A remote interface exists for creating and manipulating camera windows, see [doc/api.adoc](https://github.com/FiveYellowMice/factorio-windowed-cameras/blob/master/doc/api.adoc).

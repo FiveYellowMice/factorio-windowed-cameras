@@ -1,10 +1,9 @@
 #!/usr/bin/env ruby
 
 # This script invokes Lua language server to generate doc/doc.json,
-# then generates a documentation in doc/doc.md.
+# then generates a documentation in doc/api.adoc.
 
 require 'json'
-require 'uri'
 
 PROJECT_PATH = File.expand_path("..", __dir__)
 # Types to generate documentation for
@@ -18,12 +17,15 @@ EXTERNAL_TYPE_LINKS = {}.merge \
     %w(MapPosition GuiLocation).to_h{|a| [a, "https://lua-api.factorio.com/stable/concepts/#{a}.html"] }
 
 
+def to_id(name)
+    name.gsub(/[ .-]+/, '-')
+end
 def add_type_links(view)
     view.gsub(/\w+/) do |type|
         if RELAVANT_DEFINITIONS.include? type
-            "[#{type}](##{type})"
+            "<<#{to_id type}>>"
         elsif EXTERNAL_TYPE_LINKS.include? type
-            "[#{type}](#{EXTERNAL_TYPE_LINKS[type]})"
+            "#{EXTERNAL_TYPE_LINKS[type]}[#{type}]"
         else
             type
         end
@@ -34,43 +36,42 @@ end
 system *%W(lua-language-server --doc_out_path doc --doc #{PROJECT_PATH}), out: 2, exception: true
 doc_objs = JSON.load_file("#{PROJECT_PATH}/doc/doc.json")
 
-outfile = File.open(ARGV[0] || "#{PROJECT_PATH}/doc/doc.md", 'w')
-outfile.print "# API Reference\n\n"
+$> = File.open(ARGV[0] || "#{PROJECT_PATH}/doc/api.adoc", 'w')
+$\ = "\n\n"
+$>.print "= API Reference",
+    "\n:!sectids:"
 
 RELAVANT_DEFINITIONS.each do |obj_name|
     doc_obj = doc_objs.find{|a| a['name'] == obj_name }
 
-    outfile.print "## <a name=\"#{doc_obj['name']}\"></a>#{doc_obj['name']}\n\n"
+    $>.print "[##{to_id doc_obj['name']}]\n", "== #{doc_obj['name']}"
     define = doc_obj['defines'][0] || {}
-    outfile.print "#{define['desc']}\n\n" if define['desc']
+    $>.print "#{define['desc']}" if define['desc']
 
     doc_obj['fields'].sort_by{|f| f['start']}.each do |field|
 
         if field['extends'] && field['extends']['type'] == 'function'
-            outfile.print "### #{field['name']}\n\n"
+            $>.print "=== #{field['name']}"
 
             args = field['extends']['args'] || []
             returns = field['extends']['returns'] || []
-            outfile.print "```lua\n#{doc_obj['name']}.#{field['name']}(#{args.map{|a| a['name']}.join(', ')})\n```\n\n"
+            $>.print "```lua\n#{doc_obj['name']}.#{field['name']}(#{args.map{|a| a['name']}.join(', ')})\n```"
                 .sub(/(?<=remote\.)([\w-]+)\.(\w+)\(/, 'call("\1", "\2", ')
 
-            outfile.print "#{field['rawdesc']}\n\n" if field['rawdesc']
+            $>.print "#{field['rawdesc']}" if field['rawdesc']
 
             args.each do |arg|
-                outfile.print "@*param* `#{arg['name']}` #{add_type_links arg['view']}"
-                outfile.print " — #{arg['desc']}" if arg['desc']
-                outfile.print "\n\n"
+                $>.print "@__param__ `#{arg['name']}` #{add_type_links arg['view']}",
+                    " — #{arg['desc']}" if arg['desc']
             end
             returns.each do |ret|
-                outfile.print "@*return* #{add_type_links ret['view']}"
-                outfile.print " — #{ret['desc']}" if ret['desc']
-                outfile.print "\n\n"
+                $>.print "@__return__ #{add_type_links ret['view']}",
+                    " — #{ret['desc']}" if ret['desc']
             end
 
         else
-            outfile.print "@*field* `#{field['name']}` #{add_type_links field['view']}"
-            outfile.print " — #{field['desc']}" if field['desc']
-            outfile.print "\n\n"
+            $>.print "@__field__ `#{field['name']}` #{add_type_links field['view']}",
+                " — #{field['desc']}" if field['desc']
         end
     end
 end
