@@ -6,6 +6,13 @@ local CameraWindow = require("script.camera_window")
 local remote_interface = {}
 
 
+---@class CameraViewSpec
+---@field position MapPosition? Position of the camera, defaults to (0, 0).
+---@field surface_index integer? Surface index of the camera, defaults to the surface the player is on.
+---@field zoom number? Zoom level of the camera, defaults to 0.75.
+---@field entity LuaEntity? If specified, keep this entity at the center of the camera, overrides `position` and `surface_index`.
+
+
 ---@param player LuaPlayer
 local function check_param_player(player)
   if not player or player.object_name ~= "LuaPlayer" or not player.valid then

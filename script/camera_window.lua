@@ -28,12 +28,6 @@ CameraWindow.prototype.__index = CameraWindow.prototype
 ---@field size math2d_vector Screen-space size.
 
 
----@class CameraViewSpec
----@field position MapPosition? Position of the camera, defaults to (0, 0).
----@field surface_index integer? Surface index of the camera, defaults to the surface the player is on.
----@field zoom number? Zoom level of the camera, defaults to 0.75.
----@field entity LuaEntity? If specified, keep this entity at the center of the camera, overrides `position` and `surface_index`.
-
 
 function CameraWindow.load_deps()
   CameraWindowMenu = require('script.camera_window_menu')
@@ -42,9 +36,9 @@ end
 
 ---Create a new camera window.
 ---@param player LuaPlayer
----@param reference (LuaPlayer | LuaGuiElement | CameraViewSpec)? Reference to set initial position/zoom/surface from.
----@param size math2d_vector? Width and height of the window.
-function CameraWindow:create(player, reference, size)
+---@param view_settings CameraViewSettings?
+---@param window_settings CameraWindowSettings?
+function CameraWindow:create(player, view_settings, window_settings)
   -- Find the smallest ordinal that isn't taken by any existing window
   local new_ordinal = 1
   while self:get(player, new_ordinal) do
@@ -54,23 +48,16 @@ function CameraWindow:create(player, reference, size)
   local instance = setmetatable({
     player = player,
     ordinal = new_ordinal,
-    view_settings = {
-      position = reference and math2d.position.ensure_xy(reference.position) or {x=0, y=0},
-      surface_index = reference and reference.surface_index or player.surface_index,
-      zoom = reference and reference.zoom or 0.75,
+    view_settings = util.table.deepcopy(view_settings) or {
+      position = math2d.position.ensure_xy(player.position),
+      surface_index = player.surface_index,
+      zoom = 0.75,
+      entity = player.centered_on,
     },
-    window_settings = {
-      size = size or constants.camera_window_size_default,
+    window_settings = util.table.deepcopy(window_settings) or {
+      size = constants.camera_window_size_default,
     },
   }--[[@as CameraWindow]], self.prototype)
-
-  if reference then
-    if reference.object_name == "LuaPlayer" then
-      instance.view_settings.entity = reference.centered_on
-    else
-      instance.view_settings.entity = reference.entity
-    end
-  end
 
   storage.players[player.index].camera_windows[instance.ordinal] = instance
 
@@ -278,7 +265,7 @@ end
 function CameraWindow.prototype:clone()
   CameraWindow:end_editing(self.player)
 
-  local new_window = CameraWindow:create(self.player, self:get_camera(), self.window_settings.size)
+  local new_window = CameraWindow:create(self.player, self.view_settings, self.window_settings)
   -- Offset the new window a little
   self:create_frame()
   new_window.frame.location = {self.frame.location.x + 20, self.frame.location.y + 20}
