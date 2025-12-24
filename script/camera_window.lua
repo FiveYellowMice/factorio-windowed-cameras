@@ -107,36 +107,41 @@ function CameraWindow:for_menu(menu)
   return self:get(player, menu.frame.tags.ordinal --[[@as integer]])
 end
 
----Find the CameraWindow that is currently being edited.
+---Whether there is a camera window being edited.
+---@param player LuaPlayer | uint32
+---@return boolean
+function CameraWindow:is_editing(player)
+  return storage.players[type(player) == "number" and player or player.index].editing_camera_window ~= nil
+end
+
+---Get the CameraWindow that is currently being edited.
+---@param player LuaPlayer | uint32
 ---@return CameraWindow?
 function CameraWindow:get_editing(player)
-  local ordinal = storage.players[player.index].editing_camera_window
+  local ordinal = storage.players[type(player) == "number" and player or player.index].editing_camera_window
   if not ordinal then return nil end
 
-  return self:get(player.index, ordinal)
+  return self:get(player, ordinal)
 end
 
-function CameraWindow.prototype.__eq(a, b)
-  return a.ordinal == b.ordinal
-end
-
----Show or hide all windows, ending all edits in the process.
+---Exit window editing mode.
 ---@param player LuaPlayer
----@param visible boolean
----@return int #The number of windows affected.
-function CameraWindow:set_all_visible(player, visible)
-  local editing = CameraWindow:get_editing(player)
-  if editing then editing:end_editing() end
-
-  local count = 0
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    local camera_window = gui_element.valid and CameraWindow:from_element(gui_element)
-    if camera_window then
-      count = count + 1
-      camera_window:set_visible(visible)
-    end
+function CameraWindow:end_editing(player)
+  local window = self:get_editing(player)
+  if window then
+    window:end_editing()
   end
-  return count
+end
+
+---Update the visibilities of all camera windows.
+---@param player LuaPlayer
+function CameraWindow:update_visibility(player)
+  local visibility_toggle = shortcut.get_toggled(player)
+  local editing = self:get_editing(player)
+
+  for _, window in pairs(storage.players[player.index].camera_windows) do
+    window.frame.visible = visibility_toggle and (not editing or window:is_editing())
+  end
 end
 
 ---Create the frame GUI element if it does not exist.
@@ -159,7 +164,6 @@ function CameraWindow.prototype:create_frame()
     direction = "vertical",
     tags = {
       ordinal = self.ordinal,
-      editing = false,
       [constants.gui_tag_event_enabled] = true,
       on_location_changed = "update_menu_location",
     },
@@ -254,18 +258,6 @@ function CameraWindow.prototype:create_frame()
   return self.frame
 end
 
-function CameraWindow.prototype:get_camera()
-  return self.frame.children[2]["camera-view"]
-end
-
-function CameraWindow.prototype:get_edit_button()
-  return self.frame.children[1]["edit-button"]
-end
-
-function CameraWindow.prototype:get_menu_button()
-  return self.frame.children[1]["menu-button"]
-end
-
 function CameraWindow.prototype:destroy()
   -- None of these matter if the player has been removed
   if self.player.valid then
@@ -282,28 +274,29 @@ function CameraWindow.prototype:destroy()
   end
 end
 
-function CameraWindow.prototype:is_visible()
-  return self.frame.visible
-end
-
----@param visible boolean
-function CameraWindow.prototype:set_visible(visible)
-  if not visible then
-    self:close_menu()
-  end
-  self.frame.visible = visible
+function CameraWindow.prototype.__eq(a, b)
+  return a.ordinal == b.ordinal
 end
 
 function CameraWindow.prototype:clone()
-  self:end_editing()
+  CameraWindow:end_editing(self.player)
 
-  local player = game.get_player(self.frame.player_index)
-  if not player then return end
-
-  local new_window = CameraWindow:create(player, self:get_camera(), self:get_size())
+  local new_window = CameraWindow:create(self.player, self:get_camera(), self:get_size())
   -- Offset the new window a little
   new_window.frame.location = {self.frame.location.x + 20, self.frame.location.y + 20}
   return new_window
+end
+
+function CameraWindow.prototype:get_camera()
+  return self.frame.children[2]["camera-view"]
+end
+
+function CameraWindow.prototype:get_edit_button()
+  return self.frame.children[1]["edit-button"]
+end
+
+function CameraWindow.prototype:get_menu_button()
+  return self.frame.children[1]["menu-button"]
 end
 
 ---@return [integer, integer]
@@ -332,12 +325,13 @@ function CameraWindow.prototype:set_size(size, anchor)
   end
 end
 
+---@return boolean
 function CameraWindow.prototype:is_editing()
-  return self.frame.tags.editing and true or false
+  return self.ordinal == storage.players[self.player.index].editing_camera_window
 end
 
 function CameraWindow.prototype:toggle_editing()
-  if not self.frame.tags.editing then
+  if not self:is_editing() then
     self:begin_editing()
   else
     self:end_editing()
@@ -345,68 +339,47 @@ function CameraWindow.prototype:toggle_editing()
 end
 
 function CameraWindow.prototype:begin_editing()
-  if self.frame.tags.editing then return end
-
-  local player = game.get_player(self.frame.player_index)
-  if not player then return end
+  if self:is_editing() then return end
 
   -- End editing of other windows
-  local editing = CameraWindow:get_editing(player)
-  if editing then editing:end_editing() end
-
-  -- Hide other windows
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    local other = gui_element.valid and CameraWindow:from_element(gui_element)
-    if other and other ~= self then
-      other:set_visible(false)
-    end
-  end
+  CameraWindow:end_editing(self.player)
 
   -- Open remote view at the position of the camera
   local camera = self:get_camera()
-  player.set_controller{
+  self.player.set_controller{
     type = defines.controllers.remote,
     position = camera.position,
     surface = camera.surface_index,
   }
-  player.zoom = camera.zoom
-  player.centered_on = camera.entity
+  self.player.zoom = camera.zoom
+  self.player.centered_on = camera.entity
 
   self:get_edit_button().toggled = true
-  self.frame.tags = util.merge{self.frame.tags, {editing = true}}
-  storage.players[player.index].is_editing_camera = true
+  storage.players[self.player.index].editing_camera_window = self.ordinal
+
+  CameraWindow:update_visibility(self.player)
 end
 
 function CameraWindow.prototype:end_editing()
-  if not self.frame.tags.editing then return end
-
-  local player = game.get_player(self.frame.player_index)
-  if not player then return end
+  if not self:is_editing() then return end
 
   -- Close remote view
-  player.exit_remote_view()
+  self.player.exit_remote_view()
 
   -- Clear entity selector
-  local cursor_stack = player.cursor_stack
+  local cursor_stack = self.player.cursor_stack
   if
     cursor_stack and
     cursor_stack.valid_for_read and
-    player.cursor_stack.name == constants.track_entity_selector_name
+    cursor_stack.name == constants.track_entity_selector_name
   then
     cursor_stack.clear()
   end
 
-  -- Show other windows
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    local other = gui_element.valid and CameraWindow:from_element(gui_element)
-    if other and other ~= self then
-      other:set_visible(true)
-    end
-  end
-
   self:get_edit_button().toggled = false
-  self.frame.tags = util.merge{self.frame.tags, {editing = false}}
-  storage.players[player.index].is_editing_camera = false
+  storage.players[self.player.index].editing_camera_window = nil
+
+  CameraWindow:update_visibility(self.player)
 end
 
 ---Update the settings of the camera view, unspecified fields remain unchanged.

@@ -23,8 +23,10 @@ function shortcut.set_toggled(player, toggled)
     if not next(storage.players[player.index].camera_windows) then
       CameraWindow:create(player)
     end
+  else
+    CameraWindow:end_editing(player)
   end
-  CameraWindow:set_all_visible(player, toggled)
+  CameraWindow:update_visibility(player)
 end
 
 ---@param player LuaPlayer

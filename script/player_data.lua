@@ -6,7 +6,6 @@ local PlayerData = {}
 ---@class PlayerData
 ---@field camera_windows table<uint, CameraWindow?>
 ---@field editing_camera_window uint? Ordinal of the currently editing window.
----@field is_editing_camera boolean Whether the player is editing a camera. This is just for quickly exiting in event handlers, the canonical way to check is `CameraWindow:get_editing()`.
 PlayerData.prototype = {}
 PlayerData.prototype.__index = PlayerData.prototype
 

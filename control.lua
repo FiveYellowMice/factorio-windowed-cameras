@@ -68,19 +68,14 @@ script.on_event(defines.events.on_gui_location_changed, gui_interaction_handler)
 ---@param event EventData.on_player_changed_position | EventData.on_player_changed_surface | EventData.CustomInputEvent
 local function player_move_zoom_handler(event)
   -- Only relavant when the player is editing a camera
-  if not storage.players[event.player_index].is_editing_camera then return end
+  local camera_window = CameraWindow:get_editing(event.player_index)
+  if not camera_window then return end
 
   local player = game.get_player(event.player_index)
   if not player then return end
 
   -- Ensure we are in remote view
   if player.controller_type ~= defines.controllers.remote then return end
-
-  local camera_window = CameraWindow:get_editing(player)
-  if not camera_window then
-    storage.players[player.index].is_editing_camera = false
-    return
-  end
 
   camera_window:set_view_from_player(player)
 end
@@ -90,7 +85,7 @@ script.on_event(defines.events.on_player_changed_surface, player_move_zoom_handl
 ---@param event EventData.CustomInputEvent
 local function zoom_input_handler(event)
   -- Only relavant when the player is editing a camera
-  if not storage.players[event.player_index].is_editing_camera then return end
+  if CameraWindow:is_editing(event.player_index) then return end
 
   -- As a workaround for the absence of an on_player_zoom event, we listen on the zoom in and out
   -- controls being pressed.
@@ -107,19 +102,11 @@ script.on_event(constants.input_zoom_out, zoom_input_handler)
 -- Handle player exiting remote view
 script.on_event(defines.events.on_player_controller_changed, function(event)
   -- Only relavant when the player is editing a camera
-  if not storage.players[event.player_index].is_editing_camera then return end
-
-  local player = game.get_player(event.player_index)
-  if not player then return end
+  local camera_window = CameraWindow:get_editing(event.player_index)
+  if not camera_window then return end
 
   -- Exiting remote view
   if event.old_type ~= defines.controllers.remote then return end
-
-  local camera_window = CameraWindow:get_editing(player)
-  if not camera_window then
-    storage.players[player.index].is_editing_camera = false
-    return
-  end
 
   camera_window:end_editing()
 end)
