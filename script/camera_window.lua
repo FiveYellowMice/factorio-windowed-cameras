@@ -1,6 +1,6 @@
 -- Camera window GUI functionalities, encapsulates interactions with the GUI elements
 
-local constants = require('lib/constants.lua')
+local constants = require('constants')
 local util = require('util')
 local CameraWindowMenu ---@module 'lib.camera_window_menu'
 
@@ -20,7 +20,7 @@ local CameraWindow = {
 
 
 function CameraWindow.load_deps()
-  CameraWindowMenu = require('lib/camera_window_menu.lua')
+  CameraWindowMenu = require('script.camera_window_menu')
 end
 
 ---Create a new camera window.

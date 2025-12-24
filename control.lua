@@ -1,9 +1,9 @@
-local constants = require("lib/constants.lua")
-local migrations = require("lib/migrations.lua")
-local PlayerData = require('lib/player_data.lua')
-local CameraWindow = require("lib/camera_window.lua")
-local CameraWindowMenu = require('lib/camera_window_menu.lua')
-require('lib/remote.lua')
+local constants = require("constants")
+local migrations = require("script.migrations")
+local PlayerData = require('script.player_data')
+local CameraWindow = require("script.camera_window")
+local CameraWindowMenu = require('script.camera_window_menu')
+require('script.remote')
 
 
 script.register_metatable("PlayerData_map_metatable", PlayerData.map_metatable)

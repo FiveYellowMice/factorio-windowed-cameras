@@ -1,4 +1,4 @@
-local constants = require("lib/constants.lua")
+local constants = require("constants")
 
 data:extend{
   {

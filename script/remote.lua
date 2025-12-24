@@ -1,6 +1,6 @@
 -- Remote interface
 
-local CameraWindow = require("lib/camera_window.lua")
+local CameraWindow = require("script.camera_window")
 
 ---@class remote.windowed-cameras
 local remote_interface = {}
