@@ -1,18 +1,17 @@
--- Camera window GUI functionalities, encapsulates interactions with the GUI elements
-
 local constants = require('constants')
 local util = require('util')
 local math2d = require('math2d') ---@module 'script.meta.math2d'
-local shortcut = require('script.shortcut')
+local shortcut ---@module 'script.shortcut'
 local CameraWindowMenu ---@module 'script.camera_window_menu'
 
 local CameraWindow = {}
 
----Resides in storage,
+---Represents a camera window. Owns a GUI element. Resides in storage,
 ---@class CameraWindow
 ---@field player LuaPlayer The player this window belongs to.
 ---@field ordinal uint32 The ordinal number of this window, unique within a player.
 ---@field frame LuaGuiElement? The associated GUI element, may be invalid.
+---@field menu CameraWindowMenu? The menu belonging to this window, if any.
 ---@field view_settings CameraViewSettings
 ---@field window_settings CameraWindowSettings
 CameraWindow.prototype = {}
@@ -38,12 +37,13 @@ CameraWindow.prototype.__index = CameraWindow.prototype
 
 function CameraWindow.load_deps()
   CameraWindowMenu = require('script.camera_window_menu')
+  shortcut = require('script.shortcut')
 end
 
 ---Create a new camera window.
 ---@param player LuaPlayer
 ---@param reference (LuaPlayer | LuaGuiElement | CameraViewSpec)? Reference to set initial position/zoom/surface from.
----@param size [integer, integer]? Width and height of the window.
+---@param size math2d_vector? Width and height of the window.
 function CameraWindow:create(player, reference, size)
   -- Find the smallest ordinal that isn't taken by any existing window
   local new_ordinal = 1
@@ -60,7 +60,7 @@ function CameraWindow:create(player, reference, size)
       zoom = reference and reference.zoom or 0.75,
     },
     window_settings = {
-      size = math2d.position.ensure_xy(size or constants.camera_window_size_default),
+      size = size or constants.camera_window_size_default,
     },
   }--[[@as CameraWindow]], self.prototype)
 
@@ -73,6 +73,8 @@ function CameraWindow:create(player, reference, size)
   end
 
   storage.players[player.index].camera_windows[instance.ordinal] = instance
+
+  instance:create_frame()
 
   return instance
 end
@@ -95,16 +97,6 @@ function CameraWindow:from_element(element)
   end
 
   return self:get(element.player_index, element.tags.ordinal --[[@as integer]])
-end
-
----Find the corresponding window of a CameraWindowMenu
----@param menu CameraWindowMenu
----@return CameraWindow?
-function CameraWindow:for_menu(menu)
-  local player = game.get_player(menu.frame.player_index)
-  if not player then return nil end
-
-  return self:get(player, menu.frame.tags.ordinal --[[@as integer]])
 end
 
 ---Whether there is a camera window being edited.
@@ -136,11 +128,8 @@ end
 ---Update the visibilities of all camera windows.
 ---@param player LuaPlayer
 function CameraWindow:update_visibility(player)
-  local visibility_toggle = shortcut.get_toggled(player)
-  local editing = self:get_editing(player)
-
   for _, window in pairs(storage.players[player.index].camera_windows) do
-    window.frame.visible = visibility_toggle and (not editing or window:is_editing())
+    window:update_visibility()
   end
 end
 
@@ -168,8 +157,6 @@ function CameraWindow.prototype:create_frame()
       on_location_changed = "update_menu_location",
     },
   }
-  self.frame.style.width = self.window_settings.size.x
-  self.frame.style.height = self.window_settings.size.y
 
   local header_flow = self.frame.add{
     type = "flow",
@@ -253,9 +240,19 @@ function CameraWindow.prototype:create_frame()
       on_click = "toggle_editing",
     },
   }
-  camera.entity = self.view_settings.entity
+
+  self:update_visibility()
+  self:update_size()
+  self:update_view()
 
   return self.frame
+end
+
+function CameraWindow.prototype:destroy_frame()
+  if self.frame then
+    self.frame.destroy()
+    self.frame = nil
+  end
 end
 
 function CameraWindow.prototype:destroy()
@@ -263,7 +260,7 @@ function CameraWindow.prototype:destroy()
   if self.player.valid then
     self:end_editing()
     self:close_menu()
-    self.frame.destroy()
+    self:destroy_frame()
 
     storage.players[self.player.index].camera_windows[self.ordinal] = nil
 
@@ -281,48 +278,23 @@ end
 function CameraWindow.prototype:clone()
   CameraWindow:end_editing(self.player)
 
-  local new_window = CameraWindow:create(self.player, self:get_camera(), self:get_size())
+  local new_window = CameraWindow:create(self.player, self:get_camera(), self.window_settings.size)
   -- Offset the new window a little
+  self:create_frame()
   new_window.frame.location = {self.frame.location.x + 20, self.frame.location.y + 20}
   return new_window
 end
 
 function CameraWindow.prototype:get_camera()
-  return self.frame.children[2]["camera-view"]
+  return self:create_frame().children[2]["camera-view"]
 end
 
 function CameraWindow.prototype:get_edit_button()
-  return self.frame.children[1]["edit-button"]
+  return  self:create_frame().children[1]["edit-button"]
 end
 
 function CameraWindow.prototype:get_menu_button()
-  return self.frame.children[1]["menu-button"]
-end
-
----@return [integer, integer]
-function CameraWindow.prototype:get_size()
-  return {self.frame.style.minimal_width, self.frame.style.minimal_height}
-end
-
----Resize the window.
----@param size [integer, integer]
----@param anchor "top-left" | "top-right" | nil
-function CameraWindow.prototype:set_size(size, anchor)
-  local player = game.get_player(self.frame.player_index)
-  if not player then return end
-
-  local old_size = self:get_size()
-  local old_location = self.frame.location --[[@as GuiLocation]]
-
-  self.frame.style.width = size[1]
-  self.frame.style.height = size[2]
-
-  if anchor == "top-right" then
-    self.frame.location = {
-      x = old_location.x - (size[1] - old_size[1]) * player.display_scale,
-      y = old_location.y,
-    }
-  end
+  return  self:create_frame().children[1]["menu-button"]
 end
 
 ---@return boolean
@@ -344,15 +316,14 @@ function CameraWindow.prototype:begin_editing()
   -- End editing of other windows
   CameraWindow:end_editing(self.player)
 
-  -- Open remote view at the position of the camera
-  local camera = self:get_camera()
+  -- Open remote view at the position of this camera window
   self.player.set_controller{
     type = defines.controllers.remote,
-    position = camera.position,
-    surface = camera.surface_index,
+    position = self.view_settings.position,
+    surface = self.view_settings.surface_index,
   }
-  self.player.zoom = camera.zoom
-  self.player.centered_on = camera.entity
+  self.player.zoom = self.view_settings.zoom
+  self.player.centered_on = self.view_settings.entity
 
   self:get_edit_button().toggled = true
   storage.players[self.player.index].editing_camera_window = self.ordinal
@@ -382,54 +353,66 @@ function CameraWindow.prototype:end_editing()
   CameraWindow:update_visibility(self.player)
 end
 
----Update the settings of the camera view, unspecified fields remain unchanged.
----@param spec CameraViewSpec
-function CameraWindow.prototype:update_view(spec)
+---Update the visibility of the window.
+function CameraWindow.prototype:update_visibility()
+  if not self.frame or not self.frame.valid then return end
+
+  self.frame.visible =
+    shortcut.get_toggled(self.player) and
+    (not CameraWindow:is_editing(self.player) or self:is_editing())
+end
+
+---Update the size of the window.
+---@param anchor "top-left" | "top-right" | nil
+function CameraWindow.prototype:update_size(anchor)
+  self:create_frame()
+  local old_size = {x = self.frame.style.minimal_width, y = self.frame.style.minimal_height}
+  local old_location = self.frame.location --[[@as GuiLocation]]
+
+  self.frame.style.width = self.window_settings.size.x
+  self.frame.style.height = self.window_settings.size.y
+
+  if anchor == "top-right" then
+    self.frame.location = {
+      x = old_location.x - (self.window_settings.size.x - old_size.x) * self.player.display_scale,
+      y = old_location.y,
+    }
+  end
+end
+
+---Update view settings of the camera view.
+function CameraWindow.prototype:update_view()
   local camera = self:get_camera()
-  local player = nil---@type LuaPlayer?
-  if self:is_editing() then
-    player = game.get_player(self.frame.player_index)
-    if not player then return end
-  end
 
-  for _, field in ipairs{{"position"}, {"surface_index"}, {"zoom"}, {"entity", "centered_on"}} do
-    local spec_field = field[1]
-    local player_field = field[2] or field[1]
-
-    if spec[spec_field] then
-      camera[spec_field] = spec[spec_field]
-      if player then
-        player[player_field] = spec[spec_field]
-      end
-    end
-  end
+  camera.position = self.view_settings.position
+  camera.surface_index = self.view_settings.surface_index
+  camera.zoom = self.view_settings.zoom
+  camera.entity = self.view_settings.entity
 end
 
 ---@param player LuaPlayer
 function CameraWindow.prototype:set_view_from_player(player)
-  local camera = self:get_camera()
-  camera.position = player.position
-  camera.surface_index = player.surface_index
-  camera.zoom = player.zoom
-  camera.entity = player.centered_on
+  self.view_settings.position = math2d.position.ensure_xy(player.position)
+  self.view_settings.surface_index = player.surface_index
+  self.view_settings.zoom = player.zoom
+  self.view_settings.entity = player.centered_on
+
+  self:update_view()
 end
 
 ---@param entity LuaEntity?
 ---@return boolean success
 function CameraWindow.prototype:select_tracked_entity(entity)
-  local player = game.get_player(self.frame.player_index)
-  if not player then return false end
-
   if not entity then
-    player.create_local_flying_text{
+    self.player.create_local_flying_text{
       text = {"windowed-cameras.track-entity-selection-empty-message"},
       create_at_cursor = true,
     }
     return false
   end
 
-  if entity.force_index ~= player.force_index then
-    player.create_local_flying_text{
+  if entity.force_index ~= self.player.force_index then
+    self.player.create_local_flying_text{
       text = {"windowed-cameras.track-entity-selection-force-differ-message"},
       create_at_cursor = true,
     }
@@ -438,15 +421,15 @@ function CameraWindow.prototype:select_tracked_entity(entity)
 
   -- Selecting tracked entity may happen in or outside of editing mode, we handle both
   if self:is_editing() then
-    player.centered_on = entity
-    self:set_view_from_player(player)
+    self.player.centered_on = entity
+    self:set_view_from_player(self.player)
   else
-    local camera = self:get_camera()
-    camera.entity = entity
-    camera.zoom = player.zoom
+    self.view_settings.entity = entity
+    self.view_settings.zoom = self.player.zoom
+    self:update_view()
   end
 
-  player.create_local_flying_text{
+  self.player.create_local_flying_text{
     text = {"windowed-cameras.track-entity-selection-success-message", entity.name_tag or entity.localised_name},
     create_at_cursor = true,
   }
@@ -455,25 +438,22 @@ function CameraWindow.prototype:select_tracked_entity(entity)
 end
 
 function CameraWindow.prototype:toggle_menu()
-  local menu = CameraWindowMenu:for_window(self)
-  if not menu then
+  if not self.menu then
     CameraWindowMenu:create(self)
   else
-    menu:destroy()
+    self.menu:destroy()
   end
 end
 
 function CameraWindow.prototype:close_menu()
-  local menu = CameraWindowMenu:for_window(self)
-  if menu then
-    menu:destroy()
+  if self.menu then
+    self.menu:destroy()
   end
 end
 
 function CameraWindow.prototype:update_menu_location()
-  local menu = CameraWindowMenu:for_window(self)
-  if menu then
-    menu:align_location_to_window(self)
+  if self.menu then
+    self.menu:align_location_to_window()
   end
 end
 

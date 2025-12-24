@@ -4,11 +4,12 @@ local shortcut = require('script.shortcut')
 local PlayerData = require('script.player_data')
 local CameraWindow = require("script.camera_window")
 local CameraWindowMenu = require('script.camera_window_menu')
-require('script.remote')
+-- require('script.remote')
 
 
 script.register_metatable("PlayerData_map_metatable", PlayerData.map_metatable)
 script.register_metatable("PlayerData", PlayerData.prototype)
+script.register_metatable("CameraWindow", CameraWindow.prototype)
 
 CameraWindow.load_deps()
 CameraWindowMenu.load_deps()
@@ -49,7 +50,7 @@ local event_handler_tag_map = {
 local function gui_interaction_handler(event)
   if not event.element.tags[constants.gui_tag_event_enabled] then return end
 
-  local object = CameraWindow:from_element(event.element) or CameraWindowMenu:from(event.element)
+  local object = CameraWindow:from_element(event.element) or CameraWindowMenu:from_element(event.element)
   if not object then return end
 
   -- Call the method given by name in the on_* tags of the element

@@ -22,7 +22,7 @@ constants.camera_window_menu_name_prefix = constants.mod_name.."-camera-window-m
 
 constants.gui_tag_event_enabled = constants.mod_name.."-event-enabled"
 
-constants.camera_window_size_default = {400, 400}
-constants.camera_window_size_minimum = {240, 160}
+constants.camera_window_size_default = {x = 400, y = 400}
+constants.camera_window_size_minimum = {x = 240, y = 160}
 
 return constants

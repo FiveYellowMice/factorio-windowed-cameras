@@ -1,16 +1,16 @@
--- Camera window menu GUI functionalities, encapsulates interactions with the GUI elements
-
 local constants = require('constants')
 local util = require('util')
+local math2d = require('math2d') ---@module 'script.meta.math2d'
 local CameraWindow ---@module "script.camera_window"
 
----@class CameraWindowMenu
----@field frame LuaGuiElement
-local prototype = {}
+local CameraWindowMenu = {}
 
-local CameraWindowMenu = {
-  __index = prototype,
-}
+---A menu belonging to a camera window. Resides in storage.
+---@class CameraWindowMenu
+---@field window CameraWindow The camera window this menu belongs to.
+---@field frame LuaGuiElement? The associated GUI element, may be invalid.
+CameraWindowMenu.prototype = {}
+CameraWindowMenu.prototype.__index = CameraWindowMenu.prototype
 
 
 function CameraWindowMenu.load_deps()
@@ -21,47 +21,80 @@ end
 ---@param window CameraWindow
 ---@return CameraWindowMenu?
 function CameraWindowMenu:create(window)
-  local player = game.get_player(window.frame.player_index)
-  if not player then return nil end
+  local instance = setmetatable({
+    window = window,
+  } --[[@as CameraWindowMenu]], self.prototype)
 
-  local ordinal = window.frame.tags.ordinal
-  local window_size = window:get_size()
+  window.menu = instance
 
-  local menu = player.gui.screen.add{
+  instance.window:get_menu_button().toggled = true
+  instance:create_frame()
+
+  return instance
+end
+
+---Obtain a CameraWindowMenu from a LuaGuiElement.
+---@param element LuaGuiElement
+---@return CameraWindowMenu?
+function CameraWindowMenu:from_element(element)
+  while not util.string_starts_with(element.name, constants.camera_window_menu_name_prefix) do
+    element = element.parent
+    if not element then return nil end
+  end
+
+  return CameraWindow:get(element.player_index, element.tags.ordinal --[[@as integer]]).menu
+end
+
+---@param event EventData.on_player_display_resolution_changed | EventData.on_player_display_scale_changed
+function CameraWindowMenu:on_display_resolution_scale_changed(event)
+  for _, window in pairs(storage.players[event.player_index].camera_windows) do
+    if window.menu then
+      window.menu:align_location_to_window()
+      window.menu:update_max_window_size()
+    end
+  end
+end
+
+---Create the frame GUI element if it does not exist.
+---@return LuaGuiElement
+function CameraWindowMenu.prototype:create_frame()
+  if self.frame and self.frame.valid then return self.frame end
+
+  self.frame = self.window.player.gui.screen.add{
     type = "frame",
-    name = constants.camera_window_menu_name_prefix..ordinal,
+    name = constants.camera_window_menu_name_prefix..self.window.ordinal,
     style = constants.style_prefix.."camera_window_menu_frame",
     direction = "vertical",
     tags = {
-      ordinal = ordinal,
+      ordinal = self.window.ordinal,
     }
   }
 
-  local table = menu.add{
+  local table = self.frame.add{
     type = "table",
     name = "table",
     style = "player_input_table",
     column_count = 2,
   }
 
-  for dimension_i, dimension in ipairs{"width", "height"} do
+  for dimension, dimension_size in pairs{x = "width", y = "height"} do
     table.add{
       type = "label",
-      caption = {"windowed-cameras."..dimension.."-slider-label"},
+      caption = {"windowed-cameras."..dimension_size.."-slider-label"},
     }
     local flow = table.add{
       type = "flow",
-      name = dimension,
+      name = dimension_size,
       style = "player_input_horizontal_flow",
       direction = "horizontal",
     }
     flow.add{
       type = "slider",
       name = "slider",
-      minimum_value = constants.camera_window_size_minimum[dimension_i],
-      maximum_value = window_size[dimension_i] + 1, --- to be changed by update_max_window_size()
+      minimum_value = constants.camera_window_size_minimum[dimension],
+      maximum_value = self.window.window_settings.size[dimension] + 1, --- to be changed by update_max_window_size()
       value_step = 1,
-      value = window_size[dimension_i],
+      value = self.window.window_settings.size[dimension],
       tags = {
         [constants.gui_tag_event_enabled] = true,
         on_value_changed = "handle_slider_changed",
@@ -71,7 +104,7 @@ function CameraWindowMenu:create(window)
       type = "textfield",
       name = "textfield",
       style = "slider_value_textfield",
-      text = tostring(window_size[dimension_i]),
+      text = tostring(self.window.window_settings.size[dimension]),
       numeric = true,
       allow_decimal = false,
       allow_negative = false,
@@ -82,7 +115,7 @@ function CameraWindowMenu:create(window)
     }
   end
 
-  local buttons_flow = menu.add{
+  local buttons_flow = self.frame.add{
     type = "flow",
     name = "buttons",
     direction = "horizontal",
@@ -99,104 +132,43 @@ function CameraWindowMenu:create(window)
     }
   }
 
-  local instance = setmetatable({
-    frame = menu,
-  }, self)
+  self:align_location_to_window()
+  self:update_max_window_size()
 
-  instance:align_location_to_window(window)
-  instance:update_max_window_size()
-
-  window:get_menu_button().toggled = true
-
-  return instance
+  return self.frame
 end
 
----Obtain a CameraWindowMenu from a LuaGuiElement.
----@param element LuaGuiElement
----@return CameraWindowMenu?
-function CameraWindowMenu:from(element)
-  while not util.string_starts_with(element.name, constants.camera_window_menu_name_prefix) do
-    element = element.parent
-    if not element then return nil end
-  end
-
-  return setmetatable({
-    frame = element,
-  }, self)
-end
-
----Find the corresponding menu of a CameraWindow
----@param window CameraWindow
----@return CameraWindowMenu?
-function CameraWindowMenu:for_window(window)
-  local player = game.get_player(window.frane.player_index)
-  if not player then return nil end
-
-  local frame = nil
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    if util.string_starts_with(gui_element.name, constants.camera_window_menu_name_prefix) then
-      if gui_element.tags.ordinal == window.frane.tags.ordinal then
-        frame = gui_element
-        break
-      end
-    end
-  end
-  if not frame then return nil end
-
-  return setmetatable({
-    frame = frame,
-  }, self)
-end
-
----@param event EventData.on_player_display_resolution_changed | EventData.on_player_display_scale_changed
-function CameraWindowMenu:on_display_resolution_scale_changed(event)
-  local player = game.get_player(event.player_index)
-  if not player then return nil end
-
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    local camera_window_menu = CameraWindowMenu:from(gui_element)
-    if camera_window_menu then
-      camera_window_menu:align_location_to_window()
-      camera_window_menu:update_max_window_size()
-    end
+function CameraWindowMenu.prototype:destroy_frame()
+  if self.frame then
+    self.frame.destroy()
+    self.frame = nil
   end
 end
 
-function prototype:destroy()
-  local window = CameraWindow:for_menu(self)
+function CameraWindowMenu.prototype:destroy()
+  self:destroy_frame()
+  self.window:get_menu_button().toggled = false
 
-  self.frame.destroy()
-
-  if window then
-    window:get_menu_button().toggled = false
-  end
+  self.window.menu = nil
 end
 
 ---Place the menu just below the menu button of a window.
----@param window? CameraWindow
-function prototype:align_location_to_window(window)
-  window = window or CameraWindow:for_menu(self)
-  if not window then return end
-
-  local player = game.get_player(self.frame.player_index)
-  if not player then return end
-
-  self.frame.location = {
-    x = window.frane.location.x + (window.frane.style.minimal_width - 68) * player.display_scale,
-    y = window.frane.location.y + 40 * player.display_scale,
-  }
+function CameraWindowMenu.prototype:align_location_to_window()
+  self.window:create_frame()
+  local offset = {x = self.window.frame.style.minimal_width - 68, y = 40}
+  self:create_frame().location = math2d.position.add(
+    self.window.frame.location,
+    math2d.position.multiply_scalar(offset, self.window.player.display_scale)
+  )
 end
 
 ---Set the max value of window size sliders to match the screen size.
-function prototype:update_max_window_size()
-  local player = game.get_player(self.frame.player_index)
-  if not player then return end
-
-  for _, dimension in ipairs{"width", "height"} do
-    local slider = self.frame["table"][dimension]["slider"] ---@type LuaGuiElement
+function CameraWindowMenu.prototype:update_max_window_size()
+  for _, dimension_size in ipairs{"width", "height"} do
+    local slider = self.frame["table"][dimension_size]["slider"] ---@type LuaGuiElement
     slider.set_slider_minimum_maximum(
       slider.get_slider_minimum(),
-      player.display_resolution[dimension] / player.display_scale
+      self.window.player.display_resolution[dimension_size] / self.window.player.display_scale
     )
 
     -- To make the slider update its dragger location, we change the slider value to something else and back
@@ -206,33 +178,31 @@ function prototype:update_max_window_size()
   end
 end
 
-function prototype:handle_slider_changed()
+function CameraWindowMenu.prototype:handle_slider_changed()
   local window_size = {width = 0, height = 0}
 
-  for dimension in pairs(window_size) do
-    local slider = self.frame["table"][dimension]["slider"] ---@type LuaGuiElement
-    local textfield = self.frame["table"][dimension]["textfield"] ---@type LuaGuiElement
+  for dimension_size in pairs(window_size) do
+    local slider = self.frame["table"][dimension_size]["slider"] ---@type LuaGuiElement
+    local textfield = self.frame["table"][dimension_size]["textfield"] ---@type LuaGuiElement
 
     -- Set text to slider value
     textfield.text = tostring(slider.slider_value)
 
-    window_size[dimension] = slider.slider_value
+    window_size[dimension_size] = slider.slider_value
   end
 
   -- Resize the window
-  local window = CameraWindow:for_menu(self)
-  if window then
-    -- Anchoring to top right so that the menu button stays at the same place relative to the menu
-    window:set_size({window_size.width, window_size.height}, "top-right")
-  end
+  -- Anchoring to top right so that the menu button stays at the same place relative to the menu
+  self.window.window_settings.size = {x = window_size.width, y = window_size.height}
+  self.window:update_size("top-right")
 end
 
-function prototype:handle_slider_text_changed()
+function CameraWindowMenu.prototype:handle_slider_text_changed()
   local window_size = {width = 0, height = 0}
 
-  for dimension in pairs(window_size) do
-    local slider = self.frame["table"][dimension]["slider"] ---@type LuaGuiElement
-    local textfield = self.frame["table"][dimension]["textfield"] ---@type LuaGuiElement
+  for dimension_size in pairs(window_size) do
+    local slider = self.frame["table"][dimension_size]["slider"] ---@type LuaGuiElement
+    local textfield = self.frame["table"][dimension_size]["textfield"] ---@type LuaGuiElement
 
     local number = tonumber(textfield.text) or 0
     -- Set slider value to text, or make textfield red if text is invalid
@@ -243,20 +213,17 @@ function prototype:handle_slider_text_changed()
       textfield.style = constants.style_prefix.."invalid_value_slider_value_textfield"
     end
 
-    window_size[dimension] = slider.slider_value
+    window_size[dimension_size] = slider.slider_value
   end
 
   -- Resize the window
-  local window = CameraWindow:for_menu(self)
-  if window then
-    -- Anchoring to top right so that the menu button stays at the same place relative to the menu
-    window:set_size({window_size.width, window_size.height}, "top-right")
-  end
+  -- Anchoring to top right so that the menu button stays at the same place relative to the menu
+  self.window.window_settings.size = {x = window_size.width, y = window_size.height}
+  self.window:update_size("top-right")
 end
 
-function prototype:handle_track_entity_clicked()
-  local player = game.get_player(self.frame.player_index)
-  if not player then return end
+function CameraWindowMenu.prototype:handle_track_entity_clicked()
+  local player = self.window.player
 
   -- Give the player an entity selection tool.
   -- Do not begin editing, as the way to end editing may be confusing without prior establishment.
