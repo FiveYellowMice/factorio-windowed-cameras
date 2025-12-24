@@ -2,15 +2,31 @@
 
 local constants = require('constants')
 local util = require('util')
-local CameraWindowMenu ---@module 'lib.camera_window_menu'
+local math2d = require('math2d') ---@module 'script.meta.math2d'
+local CameraWindowMenu ---@module 'script.camera_window_menu'
 
+local CameraWindow = {}
+
+---Resides in storage,
 ---@class CameraWindow
----@field window LuaGuiElement
-local prototype = {}
+---@field player LuaPlayer The player this window belongs to.
+---@field ordinal uint32 The ordinal number of this window, unique within a player.
+---@field frame LuaGuiElement? The associated GUI element, may be invalid.
+---@field view_settings CameraViewSettings
+---@field window_settings CameraWindowSettings
+CameraWindow.prototype = {}
+CameraWindow.prototype.__index = CameraWindow.prototype
 
-local CameraWindow = {
-  __index = prototype,
-}
+
+---@class (exact) CameraViewSettings
+---@field position math2d_position
+---@field surface_index integer
+---@field zoom number
+---@field entity LuaEntity? If specified, keep this entity at the center of the camera, overrides `position` and `surface_index`.
+
+---@class (exact) CameraWindowSettings
+---@field size math2d_vector Screen-space size.
+
 
 ---@class CameraViewSpec
 ---@field position MapPosition? Position of the camera, defaults to (0, 0).
@@ -28,51 +44,171 @@ end
 ---@param reference (LuaPlayer | LuaGuiElement | CameraViewSpec)? Reference to set initial position/zoom/surface from.
 ---@param size [integer, integer]? Width and height of the window.
 function CameraWindow:create(player, reference, size)
-  if not reference then
-    reference = player
+  -- Find the smallest ordinal that isn't taken by any existing window
+  local new_ordinal = 1
+  while self:get(player, new_ordinal) do
+    new_ordinal = new_ordinal + 1
   end
 
-  local instance = setmetatable({}, self)
+  local instance = setmetatable({
+    player = player,
+    ordinal = new_ordinal,
+    view_settings = {
+      position = reference and math2d.position.ensure_xy(reference.position) or {x=0, y=0},
+      surface_index = reference and reference.surface_index or player.surface_index,
+      zoom = reference and reference.zoom or 0.75,
+    },
+    window_settings = {
+      size = math2d.position.ensure_xy(size or constants.camera_window_size_default),
+    },
+  }--[[@as CameraWindow]], self.prototype)
 
-  -- Find the smallest ordinal that isn't taken by any existing window
-  local existing_ordinals = {}
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    if gui_element.valid and util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
-      existing_ordinals[tonumber(gui_element.tags.ordinal)] = true
+  if reference then
+    if reference.object_name == "LuaPlayer" then
+      instance.view_settings.entity = reference.centered_on
+    else
+      instance.view_settings.entity = reference.entity
     end
   end
-  local window_ordinal = 1
-  while existing_ordinals[window_ordinal] do
-    window_ordinal = window_ordinal + 1
+
+  storage.players[player.index].camera_windows[instance.ordinal] = instance
+
+  return instance
+end
+
+---Get a specific window.
+---@param player LuaPlayer | uint32 Player owning the window or index thereof.
+---@param ordinal integer Ordinal of the window.
+---@return CameraWindow?
+function CameraWindow:get(player, ordinal)
+  return storage.players[type(player) == "number" and player or player.index].camera_windows[ordinal]
+end
+
+---Obtain a CameraWindow from a LuaGuiElement.
+---@param element LuaGuiElement
+---@return CameraWindow?
+function CameraWindow:from_element(element)
+  while not util.string_starts_with(element.name, constants.camera_window_name_prefix) do
+    element = element.parent
+    if not element then return nil end
   end
 
-  instance.window = player.gui.screen.add{
+  return self:get(element.player_index, element.tags.ordinal --[[@as integer]])
+end
+
+---Find the corresponding window of a CameraWindowMenu
+---@param menu CameraWindowMenu
+---@return CameraWindow?
+function CameraWindow:for_menu(menu)
+  local player = game.get_player(menu.frame.player_index)
+  if not player then return nil end
+
+  return self:get(player, menu.frame.tags.ordinal --[[@as integer]])
+end
+
+---Find the CameraWindow that is currently being edited.
+---@return CameraWindow?
+function CameraWindow:get_editing(player)
+  local element = nil
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
+      if gui_element.tags.editing then
+        element = gui_element
+        break
+      end
+    end
+  end
+  if not element then return nil end
+
+  return self:get(element.player_index, element.tags.ordinal --[[@as integer]])
+end
+
+function CameraWindow.prototype.__eq(a, b)
+  return a.ordinal == b.ordinal
+end
+
+---Show or hide all windows, ending all edits in the process.
+---@param player LuaPlayer
+---@param visible boolean
+---@return int #The number of windows affected.
+function CameraWindow:set_all_visible(player, visible)
+  local editing = CameraWindow:get_editing(player)
+  if editing then editing:end_editing() end
+
+  local count = 0
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    local camera_window = gui_element.valid and CameraWindow:from_element(gui_element)
+    if camera_window then
+      count = count + 1
+      camera_window:set_visible(visible)
+    end
+  end
+  return count
+end
+
+---An event raised when a camera window has been closed.
+CameraWindow.event_window_closed = script.generate_event_name()
+---@package
+---@param player_index integer
+function CameraWindow:raise_window_closed(player_index)
+  local player = game.get_player(player_index)
+  if not player then return end
+
+  local remaining = false
+  for _, gui_element in ipairs(player.gui.screen.children) do
+    if gui_element.valid and util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
+      remaining = true
+      break
+    end
+  end
+
+  ---@class CameraWindowClosedData
+  local event = {
+    player_index = player_index,
+    ---Whether there are camera windows remaining open afterwards.
+    remaining = remaining,
+  }
+  script.raise_event(self.event_window_closed, event)
+end
+
+---Create the frame GUI element if it does not exist.
+---@return LuaGuiElement
+function CameraWindow.prototype:create_frame()
+  if self.frame and self.frame.valid then return self.frame end
+
+  -- Destroy other frames with the same ordinal
+  for _, gui_element in ipairs(self.player.gui.screen.children) do
+    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
+      if gui_element.tags.ordinal == self.ordinal then
+        gui_element.destroy()
+      end
+    end
+  end
+
+  self.frame = self.player.gui.screen.add{
     type = "frame",
-    name = constants.camera_window_name_prefix..window_ordinal,
+    name = constants.camera_window_name_prefix..self.ordinal,
     direction = "vertical",
     tags = {
-      ordinal = window_ordinal,
+      ordinal = self.ordinal,
       editing = false,
       [constants.gui_tag_event_enabled] = true,
       on_location_changed = "update_menu_location",
     },
   }
-  if size then
-    instance.window.style.size = size
-  else
-    instance.window.style.size = constants.camera_window_size_default
-  end
+  self.frame.style.width = self.window_settings.size.x
+  self.frame.style.height = self.window_settings.size.y
 
-  local header_flow = instance.window.add{
+  local header_flow = self.frame.add{
     type = "flow",
     direction = "horizontal",
     style = "frame_header_flow"
   }
-  header_flow.drag_target = instance.window
+  header_flow.drag_target = self.frame
   header_flow.add{
     type = "label",
     style = constants.style_prefix.."camera_window_title",
-    caption = {"windowed-cameras.window-title", window_ordinal},
+    caption = {"windowed-cameras.window-title", self.ordinal},
     ignored_by_interaction = true,
   }
   header_flow.add{
@@ -129,7 +265,7 @@ function CameraWindow:create(player, reference, size)
     },
   }
 
-  local content_flow = instance.window.add{
+  local content_flow = self.frame.add{
     type = "frame",
     style = "inside_shallow_frame"
   }
@@ -137,223 +273,110 @@ function CameraWindow:create(player, reference, size)
     type = "camera",
     name = "camera-view",
     style = constants.style_prefix.."camera_window_camera_view",
-    position = reference.position or player.position,
-    surface_index = reference.surface_index,
-    zoom = reference.zoom,
+    position = self.view_settings.position,
+    surface_index = self.view_settings.surface_index,
+    zoom = self.view_settings.zoom,
     tags = {
       [constants.gui_tag_event_enabled] = true,
       on_click = "toggle_editing",
     },
   }
+  camera.entity = self.view_settings.entity
 
-  if reference.object_name == "LuaPlayer" then
-    camera.entity = reference.centered_on
-  else
-    camera.entity = reference.entity
+  return self.frame
+end
+
+function CameraWindow.prototype:get_camera()
+  return self.frame.children[2]["camera-view"]
+end
+
+function CameraWindow.prototype:get_edit_button()
+  return self.frame.children[1]["edit-button"]
+end
+
+function CameraWindow.prototype:get_menu_button()
+  return self.frame.children[1]["menu-button"]
+end
+
+function CameraWindow.prototype:destroy()
+  -- None of these matter if the player has been removed
+  if self.player.valid then
+    self:end_editing()
+    self:close_menu()
+    self.frame.destroy()
+
+    storage.players[self.player.index].camera_windows[self.ordinal] = nil
+
+    getmetatable(self):raise_window_closed(self.player.index)
   end
-
-  return instance
 end
 
----Obtain a CameraWindow from a LuaGuiElement.
----@param element LuaGuiElement
----@return CameraWindow?
-function CameraWindow:from(element)
-  while not util.string_starts_with(element.name, constants.camera_window_name_prefix) do
-    element = element.parent
-    if not element then return nil end
-  end
-
-  return setmetatable({
-    window = element,
-  }, self)
-end
-
----Find the window with the given ordinal
----@param player LuaPlayer
----@param ordinal integer
-function CameraWindow:get(player, ordinal)
-  local window = nil
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
-      if gui_element.tags.ordinal == ordinal then
-        window = gui_element
-        break
-      end
-    end
-  end
-  if not window then return nil end
-
-  return setmetatable({
-    window = window,
-  }, self)
-end
-
----Find the corresponding window of a CameraWindowMenu
----@param menu CameraWindowMenu
----@return CameraWindow?
-function CameraWindow:for_menu(menu)
-  local player = game.get_player(menu.frame.player_index)
-  if not player then return nil end
-
-  return self:get(player, menu.frame.tags.ordinal --[[@as integer]])
-end
-
----Find the CameraWindow that is currently being edited.
----@return CameraWindow?
-function CameraWindow:get_editing(player)
-  local window = nil
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
-      if gui_element.tags.editing then
-        window = gui_element
-        break
-      end
-    end
-  end
-  if not window then return nil end
-
-  return setmetatable({
-    window = window,
-  }, self)
-end
-
-function CameraWindow.__eq(a, b)
-  return a.window == b.window
-end
-
----Show or hide all windows, ending all edits in the process.
----@param player LuaPlayer
----@param visible boolean
----@return int #The number of windows affected.
-function CameraWindow:set_all_visible(player, visible)
-  local editing = CameraWindow:get_editing(player)
-  if editing then editing:end_editing() end
-
-  local count = 0
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    local camera_window = gui_element.valid and CameraWindow:from(gui_element)
-    if camera_window then
-      count = count + 1
-      camera_window:set_visible(visible)
-    end
-  end
-  return count
-end
-
----An event raised when a camera window has been closed.
-CameraWindow.event_window_closed = script.generate_event_name()
----@package
----@param player_index integer
-function CameraWindow:raise_window_closed(player_index)
-  local player = game.get_player(player_index)
-  if not player then return end
-
-  local remaining = false
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    if gui_element.valid and util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
-      remaining = true
-      break
-    end
-  end
-
-  ---@class CameraWindowClosedData
-  local event = {
-    player_index = player_index,
-    ---Whether there are camera windows remaining open afterwards.
-    remaining = remaining,
-  }
-  script.raise_event(self.event_window_closed, event)
-end
-
-function prototype:get_camera()
-  return self.window.children[2]["camera-view"]
-end
-
-function prototype:get_edit_button()
-  return self.window.children[1]["edit-button"]
-end
-
-function prototype:get_menu_button()
-  return self.window.children[1]["menu-button"]
-end
-
-function prototype:destroy()
-  local player_index = self.window.player_index
-
-  self:end_editing()
-  self:close_menu()
-  self.window.destroy()
-
-  getmetatable(self):raise_window_closed(player_index)
-end
-
-function prototype:is_visible()
-  return self.window.visible
+function CameraWindow.prototype:is_visible()
+  return self.frame.visible
 end
 
 ---@param visible boolean
-function prototype:set_visible(visible)
+function CameraWindow.prototype:set_visible(visible)
   if not visible then
     self:close_menu()
   end
-  self.window.visible = visible
+  self.frame.visible = visible
 end
 
-function prototype:clone()
+function CameraWindow.prototype:clone()
   self:end_editing()
 
-  local player = game.get_player(self.window.player_index)
+  local player = game.get_player(self.frame.player_index)
   if not player then return end
 
   local new_window = CameraWindow:create(player, self:get_camera(), self:get_size())
   -- Offset the new window a little
-  new_window.window.location = {self.window.location.x + 20, self.window.location.y + 20}
+  new_window.frame.location = {self.frame.location.x + 20, self.frame.location.y + 20}
   return new_window
 end
 
 ---@return [integer, integer]
-function prototype:get_size()
-  return {self.window.style.minimal_width, self.window.style.minimal_height}
+function CameraWindow.prototype:get_size()
+  return {self.frame.style.minimal_width, self.frame.style.minimal_height}
 end
 
 ---Resize the window.
 ---@param size [integer, integer]
 ---@param anchor "top-left" | "top-right" | nil
-function prototype:set_size(size, anchor)
-  local player = game.get_player(self.window.player_index)
+function CameraWindow.prototype:set_size(size, anchor)
+  local player = game.get_player(self.frame.player_index)
   if not player then return end
 
   local old_size = self:get_size()
-  local old_location = self.window.location --[[@as GuiLocation]]
+  local old_location = self.frame.location --[[@as GuiLocation]]
 
-  self.window.style.width = size[1]
-  self.window.style.height = size[2]
+  self.frame.style.width = size[1]
+  self.frame.style.height = size[2]
 
   if anchor == "top-right" then
-    self.window.location = {
+    self.frame.location = {
       x = old_location.x - (size[1] - old_size[1]) * player.display_scale,
       y = old_location.y,
     }
   end
 end
 
-function prototype:is_editing()
-  return self.window.tags.editing and true or false
+function CameraWindow.prototype:is_editing()
+  return self.frame.tags.editing and true or false
 end
 
-function prototype:toggle_editing()
-  if not self.window.tags.editing then
+function CameraWindow.prototype:toggle_editing()
+  if not self.frame.tags.editing then
     self:begin_editing()
   else
     self:end_editing()
   end
 end
 
-function prototype:begin_editing()
-  if self.window.tags.editing then return end
+function CameraWindow.prototype:begin_editing()
+  if self.frame.tags.editing then return end
 
-  local player = game.get_player(self.window.player_index)
+  local player = game.get_player(self.frame.player_index)
   if not player then return end
 
   -- End editing of other windows
@@ -362,7 +385,7 @@ function prototype:begin_editing()
 
   -- Hide other windows
   for _, gui_element in ipairs(player.gui.screen.children) do
-    local other = gui_element.valid and CameraWindow:from(gui_element)
+    local other = gui_element.valid and CameraWindow:from_element(gui_element)
     if other and other ~= self then
       other:set_visible(false)
     end
@@ -379,14 +402,14 @@ function prototype:begin_editing()
   player.centered_on = camera.entity
 
   self:get_edit_button().toggled = true
-  self.window.tags = util.merge{self.window.tags, {editing = true}}
+  self.frame.tags = util.merge{self.frame.tags, {editing = true}}
   storage.players[player.index].is_editing_camera = true
 end
 
-function prototype:end_editing()
-  if not self.window.tags.editing then return end
+function CameraWindow.prototype:end_editing()
+  if not self.frame.tags.editing then return end
 
-  local player = game.get_player(self.window.player_index)
+  local player = game.get_player(self.frame.player_index)
   if not player then return end
 
   -- Close remote view
@@ -404,24 +427,24 @@ function prototype:end_editing()
 
   -- Show other windows
   for _, gui_element in ipairs(player.gui.screen.children) do
-    local other = gui_element.valid and CameraWindow:from(gui_element)
+    local other = gui_element.valid and CameraWindow:from_element(gui_element)
     if other and other ~= self then
       other:set_visible(true)
     end
   end
 
   self:get_edit_button().toggled = false
-  self.window.tags = util.merge{self.window.tags, {editing = false}}
+  self.frame.tags = util.merge{self.frame.tags, {editing = false}}
   storage.players[player.index].is_editing_camera = false
 end
 
 ---Update the settings of the camera view, unspecified fields remain unchanged.
 ---@param spec CameraViewSpec
-function prototype:update_view(spec)
+function CameraWindow.prototype:update_view(spec)
   local camera = self:get_camera()
   local player = nil---@type LuaPlayer?
   if self:is_editing() then
-    player = game.get_player(self.window.player_index)
+    player = game.get_player(self.frame.player_index)
     if not player then return end
   end
 
@@ -439,7 +462,7 @@ function prototype:update_view(spec)
 end
 
 ---@param player LuaPlayer
-function prototype:set_view_from_player(player)
+function CameraWindow.prototype:set_view_from_player(player)
   local camera = self:get_camera()
   camera.position = player.position
   camera.surface_index = player.surface_index
@@ -449,8 +472,8 @@ end
 
 ---@param entity LuaEntity?
 ---@return boolean success
-function prototype:select_tracked_entity(entity)
-  local player = game.get_player(self.window.player_index)
+function CameraWindow.prototype:select_tracked_entity(entity)
+  local player = game.get_player(self.frame.player_index)
   if not player then return false end
 
   if not entity then
@@ -487,7 +510,7 @@ function prototype:select_tracked_entity(entity)
   return true
 end
 
-function prototype:toggle_menu()
+function CameraWindow.prototype:toggle_menu()
   local menu = CameraWindowMenu:for_window(self)
   if not menu then
     CameraWindowMenu:create(self)
@@ -496,14 +519,14 @@ function prototype:toggle_menu()
   end
 end
 
-function prototype:close_menu()
+function CameraWindow.prototype:close_menu()
   local menu = CameraWindowMenu:for_window(self)
   if menu then
     menu:destroy()
   end
 end
 
-function prototype:update_menu_location()
+function CameraWindow.prototype:update_menu_location()
   local menu = CameraWindowMenu:for_window(self)
   if menu then
     menu:align_location_to_window(self)

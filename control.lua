@@ -7,22 +7,22 @@ require('script.remote')
 
 
 script.register_metatable("PlayerData_map_metatable", PlayerData.map_metatable)
-script.register_metatable("PlayerData", PlayerData)
+script.register_metatable("PlayerData", PlayerData.prototype)
 
 CameraWindow.load_deps()
 CameraWindowMenu.load_deps()
 
 script.on_init(function()
-  PlayerData:on_init()
+  PlayerData.on_init()
 end)
 
 script.on_event(defines.events.on_player_removed, function(event)
-  PlayerData:on_player_removed(event)
+  PlayerData.on_player_removed(event)
 end)
 
 script.on_configuration_changed(function(event)
   migrations.on_configuration_changed(event)
-  PlayerData:on_configuration_changed(event)
+  PlayerData.on_configuration_changed(event)
 end)
 
 
@@ -78,7 +78,7 @@ local event_handler_tag_map = {
 local function gui_interaction_handler(event)
   if not event.element.tags[constants.gui_tag_event_enabled] then return end
 
-  local object = CameraWindow:from(event.element) or CameraWindowMenu:from(event.element)
+  local object = CameraWindow:from_element(event.element) or CameraWindowMenu:from(event.element)
   if not object then return end
 
   -- Call the method given by name in the on_* tags of the element

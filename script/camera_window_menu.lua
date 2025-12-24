@@ -2,7 +2,7 @@
 
 local constants = require('constants')
 local util = require('util')
-local CameraWindow ---@module "lib.camera_window"
+local CameraWindow ---@module "script.camera_window"
 
 ---@class CameraWindowMenu
 ---@field frame LuaGuiElement
@@ -21,10 +21,10 @@ end
 ---@param window CameraWindow
 ---@return CameraWindowMenu?
 function CameraWindowMenu:create(window)
-  local player = game.get_player(window.window.player_index)
+  local player = game.get_player(window.frame.player_index)
   if not player then return nil end
 
-  local ordinal = window.window.tags.ordinal
+  local ordinal = window.frame.tags.ordinal
   local window_size = window:get_size()
 
   local menu = player.gui.screen.add{
@@ -129,20 +129,20 @@ end
 ---@param window CameraWindow
 ---@return CameraWindowMenu?
 function CameraWindowMenu:for_window(window)
-  local player = game.get_player(window.window.player_index)
+  local player = game.get_player(window.frane.player_index)
   if not player then return nil end
 
   local frame = nil
   for _, gui_element in ipairs(player.gui.screen.children) do
     if util.string_starts_with(gui_element.name, constants.camera_window_menu_name_prefix) then
-      if gui_element.tags.ordinal == window.window.tags.ordinal then
+      if gui_element.tags.ordinal == window.frane.tags.ordinal then
         frame = gui_element
         break
       end
     end
   end
   if not frame then return nil end
-  
+
   return setmetatable({
     frame = frame,
   }, self)
@@ -182,8 +182,8 @@ function prototype:align_location_to_window(window)
   if not player then return end
 
   self.frame.location = {
-    x = window.window.location.x + (window.window.style.minimal_width - 68) * player.display_scale,
-    y = window.window.location.y + 40 * player.display_scale,
+    x = window.frane.location.x + (window.frane.style.minimal_width - 68) * player.display_scale,
+    y = window.frane.location.y + 40 * player.display_scale,
   }
 end
 

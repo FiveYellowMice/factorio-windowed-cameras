@@ -19,8 +19,8 @@ local function check_param_spec(spec)
     error("Expected table for 'spec' parameter")
   end
 
-  if spec.position and (type(spec.position) ~= "table" or 
-     type(spec.position.x or spec.position[1]) ~= "number" or 
+  if spec.position and (type(spec.position) ~= "table" or
+     type(spec.position.x or spec.position[1]) ~= "number" or
      type(spec.position.y or spec.position[2]) ~= "number") then
     error("spec.position must be a MapPosition with x and y coordinates")
   end
@@ -80,7 +80,7 @@ function remote_interface.create(player, spec, size)
   if size then check_param_size(size) end
 
   local window = CameraWindow:create(player, spec, size)
-  return window.window.tags.ordinal--[[@as integer]]
+  return window.frame.tags.ordinal--[[@as integer]]
 end
 
 ---Destroy a camera window.
@@ -120,7 +120,7 @@ end
 function remote_interface.get_window_frame(player, ordinal)
   local window = check_and_get_window(player, ordinal)
 
-  return window.window
+  return window.frane
 end
 
 ---Get the size of a camera window.
@@ -152,7 +152,7 @@ end
 function remote_interface.get_window_location(player, ordinal)
   local window = check_and_get_window(player, ordinal)
 
-  return window.window.location
+  return window.frane.location
 end
 
 ---Set the location of a camera window on screen.
@@ -162,7 +162,7 @@ end
 function remote_interface.set_window_location(player, ordinal, location)
   local window = check_and_get_window(player, ordinal)
 
-  window.window.location = location
+  window.frane.location = location
   window:update_menu_location()
 end
 
