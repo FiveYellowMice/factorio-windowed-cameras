@@ -1,5 +1,6 @@
 local constants = require("constants")
 local migrations = require("script.migrations")
+local shortcut = require('script.shortcut')
 local PlayerData = require('script.player_data')
 local CameraWindow = require("script.camera_window")
 local CameraWindowMenu = require('script.camera_window_menu')
@@ -27,41 +28,11 @@ end)
 
 
 -- Handle shortcut button press
----@param event EventData.on_lua_shortcut | EventData.CustomInputEvent
-function shortcut_handler(event)
-  local player = game.get_player(event.player_index)
-  if not player then return end
-
-  if not player.is_shortcut_toggled(constants.shortcut_toggle_display_name) then
-    -- Show all windows, or create one of none exists
-    local n = CameraWindow:set_all_visible(player, true)
-    if n == 0 then
-      CameraWindow:create(player)
-    end
-    player.set_shortcut_toggled(constants.shortcut_toggle_display_name, true)
-  else
-    -- Hide all windows
-    CameraWindow:set_all_visible(player, false)
-    player.set_shortcut_toggled(constants.shortcut_toggle_display_name, false)
-  end
-end
 script.on_event(defines.events.on_lua_shortcut, function(event)
   if event.prototype_name ~= constants.shortcut_toggle_display_name then return end
-  shortcut_handler(event)
+  shortcut.on_activate(event)
 end)
-script.on_event(constants.input_toggle_display, shortcut_handler)
-
--- Handle window closing
----@param event CameraWindowClosedData
-script.on_event(CameraWindow.event_window_closed, function(event)
-  local player = game.get_player(event.player_index)
-  if not player then return end
-
-  -- Treat the shortcut as toggled off when there are no more windows remaining
-  if not event.remaining then
-    player.set_shortcut_toggled(constants.shortcut_toggle_display_name, false)
-  end
-end)
+script.on_event(constants.input_toggle_display, shortcut.on_activate)
 
 -- Handle GUI interactions
 local event_handler_tag_map = {

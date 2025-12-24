@@ -3,6 +3,7 @@
 local constants = require('constants')
 local util = require('util')
 local math2d = require('math2d') ---@module 'script.meta.math2d'
+local shortcut = require('script.shortcut')
 local CameraWindowMenu ---@module 'script.camera_window_menu'
 
 local CameraWindow = {}
@@ -109,18 +110,10 @@ end
 ---Find the CameraWindow that is currently being edited.
 ---@return CameraWindow?
 function CameraWindow:get_editing(player)
-  local element = nil
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    if util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
-      if gui_element.tags.editing then
-        element = gui_element
-        break
-      end
-    end
-  end
-  if not element then return nil end
+  local ordinal = storage.players[player.index].editing_camera_window
+  if not ordinal then return nil end
 
-  return self:get(element.player_index, element.tags.ordinal --[[@as integer]])
+  return self:get(player.index, ordinal)
 end
 
 function CameraWindow.prototype.__eq(a, b)
@@ -144,31 +137,6 @@ function CameraWindow:set_all_visible(player, visible)
     end
   end
   return count
-end
-
----An event raised when a camera window has been closed.
-CameraWindow.event_window_closed = script.generate_event_name()
----@package
----@param player_index integer
-function CameraWindow:raise_window_closed(player_index)
-  local player = game.get_player(player_index)
-  if not player then return end
-
-  local remaining = false
-  for _, gui_element in ipairs(player.gui.screen.children) do
-    if gui_element.valid and util.string_starts_with(gui_element.name, constants.camera_window_name_prefix) then
-      remaining = true
-      break
-    end
-  end
-
-  ---@class CameraWindowClosedData
-  local event = {
-    player_index = player_index,
-    ---Whether there are camera windows remaining open afterwards.
-    remaining = remaining,
-  }
-  script.raise_event(self.event_window_closed, event)
 end
 
 ---Create the frame GUI element if it does not exist.
@@ -307,7 +275,10 @@ function CameraWindow.prototype:destroy()
 
     storage.players[self.player.index].camera_windows[self.ordinal] = nil
 
-    getmetatable(self):raise_window_closed(self.player.index)
+    -- Set shortcut to false when closing the last window
+    if not next(storage.players[self.player.index].camera_windows) then
+      shortcut.set_toggled(self.player, false)
+    end
   end
 end
 
