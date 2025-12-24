@@ -49,7 +49,7 @@ end
 function CameraWindowMenu:on_display_resolution_scale_changed(event)
   for _, window in pairs(storage.players[event.player_index].camera_windows) do
     if window.menu then
-      window.menu:align_location_to_window()
+      window.menu:update_frame_location()
       window.menu:update_max_window_size()
     end
   end
@@ -132,7 +132,7 @@ function CameraWindowMenu.prototype:create_frame()
     }
   }
 
-  self:align_location_to_window()
+  self:update_frame_location()
   self:update_max_window_size()
 
   return self.frame
@@ -153,13 +153,19 @@ function CameraWindowMenu.prototype:destroy()
 end
 
 ---Place the menu just below the menu button of a window.
-function CameraWindowMenu.prototype:align_location_to_window()
+function CameraWindowMenu.prototype:update_frame_location()
+  self:create_frame()
   self.window:create_frame()
+
   local offset = {x = self.window.frame.style.minimal_width - 68, y = 40}
-  self:create_frame().location = math2d.position.add(
+  self.frame.location = math2d.position.add(
     self.window.frame.location,
     math2d.position.multiply_scalar(offset, self.window.player.display_scale)
   )
+end
+
+function CameraWindowMenu.prototype:bring_to_front()
+  self:create_frame().bring_to_front()
 end
 
 ---Set the max value of window size sliders to match the screen size.

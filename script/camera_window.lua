@@ -440,7 +440,8 @@ end
 
 function CameraWindow.prototype:update_menu_location()
   if self.menu then
-    self.menu:align_location_to_window()
+    self.menu:update_frame_location()
+    self.menu:bring_to_front()
   end
 end
 
