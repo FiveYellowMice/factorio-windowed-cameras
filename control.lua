@@ -10,6 +10,7 @@ require('script.remote')
 script.register_metatable("PlayerData_map_metatable", PlayerData.map_metatable)
 script.register_metatable("PlayerData", PlayerData.prototype)
 script.register_metatable("CameraWindow", CameraWindow.prototype)
+script.register_metatable("CameraWindowMenu", CameraWindowMenu.prototype)
 
 CameraWindow.load_deps()
 CameraWindowMenu.load_deps()

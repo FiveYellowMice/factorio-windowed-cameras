@@ -15,7 +15,6 @@ PlayerData.prototype.__index = PlayerData.prototype
 function PlayerData.new()
   return setmetatable({
     camera_windows = {},
-    is_editing_camera = false,
   }--[[@as PlayerData]], PlayerData.prototype)
 end
 
