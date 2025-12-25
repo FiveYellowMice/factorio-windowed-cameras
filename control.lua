@@ -4,7 +4,7 @@ local shortcut = require('script.shortcut')
 local PlayerData = require('script.player_data')
 local CameraWindow = require("script.camera_window")
 local CameraWindowMenu = require('script.camera_window_menu')
--- require('script.remote')
+require('script.remote')
 
 
 script.register_metatable("PlayerData_map_metatable", PlayerData.map_metatable)

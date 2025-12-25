@@ -1,5 +1,7 @@
 -- Remote interface
 
+local util = require('util')
+
 local CameraWindow = require("script.camera_window")
 
 ---@class remote.windowed-cameras
@@ -86,8 +88,17 @@ function remote_interface.create(player, spec, size)
   check_param_spec(spec)
   if size then check_param_size(size) end
 
-  local window = CameraWindow:create(player, spec, size)
-  return window.frame.tags.ordinal--[[@as integer]]
+  local window = CameraWindow:create(player,
+    util.merge{{
+      position = {x = 0, y = 0},
+      surface_index = player.surface_index,
+      zoom = 0.75,
+    }, spec},
+    size and {
+      size = {x = size[1], y = size[2]},
+    }
+  )
+  return window.ordinal
 end
 
 ---Destroy a camera window.
@@ -107,7 +118,8 @@ function remote_interface.update_view(player, ordinal, spec)
   local window = check_and_get_window(player, ordinal)
   check_param_spec(spec)
 
-  window:update_view(spec)
+  window.view_settings = util.merge{window.view_settings, spec}
+  window:update_view()
 end
 
 ---Get the camera view LuaGuiElement in a window. It's best to treat the obtained element as read-only.
@@ -127,7 +139,7 @@ end
 function remote_interface.get_window_frame(player, ordinal)
   local window = check_and_get_window(player, ordinal)
 
-  return window.frane
+  return window:create_frame()
 end
 
 ---Get the size of a camera window.
@@ -137,7 +149,7 @@ end
 function remote_interface.get_window_size(player, ordinal)
   local window = check_and_get_window(player, ordinal)
 
-  return window:get_size()
+  return {window.window_settings.size.x, window.window_settings.size.y}
 end
 
 ---Set the size of a camera window.
@@ -148,7 +160,7 @@ function remote_interface.set_window_size(player, ordinal, size)
   local window = check_and_get_window(player, ordinal)
   check_param_size(size)
 
-  window:set_size(size)
+  window.window_settings.size = {x = size[1], y = size[2]}
 end
 
 
@@ -159,7 +171,7 @@ end
 function remote_interface.get_window_location(player, ordinal)
   local window = check_and_get_window(player, ordinal)
 
-  return window.frane.location
+  return window.frame.location
 end
 
 ---Set the location of a camera window on screen.
@@ -169,7 +181,7 @@ end
 function remote_interface.set_window_location(player, ordinal, location)
   local window = check_and_get_window(player, ordinal)
 
-  window.frane.location = location
+  window.frame.location = location
   window:update_menu_location()
 end
 
