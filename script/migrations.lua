@@ -3,17 +3,33 @@
 -- to only run when the mod is upgraded.
 
 local util = require("util")
+local CameraWindow = require("script.camera_window")
 
 local migrations = {}
 
 ---@param event ConfigurationChangedData
 function migrations.on_configuration_changed(event)
+  -- Run when this mod has been upgraded.
   local mod_change = event.mod_changes[script.mod_name]
   if not (mod_change and mod_change.old_version) then return end
 
+  -- Run migrations.
   for version, func in pairs(migrations.this_mod_migrations) do
     if helpers.compare_versions(mod_change.old_version, version) < 0 then
+      log("Run migrations for v"..version)
       func()
+    end
+  end
+
+  -- Recreate GUIs.
+  for _, player_data in pairs(storage.players) do
+    for _, window in pairs(player_data.camera_windows) do
+      window:destroy_frame()
+      window:create_frame()
+      if window.menu then
+        window.menu:destroy_frame()
+        window.menu:create_frame()
+      end
     end
   end
 end
@@ -53,7 +69,56 @@ migrations.this_mod_migrations = {
         end
       end
     end
-  end
+  end,
+
+  ["0.4.0"] = function()
+    for _, player in pairs(game.players) do
+      -- Discard old PlayerData.
+      storage.players[player.index] = {
+        camera_windows = {},
+      }
+      -- End all edits, but checking for edit states is too much work,
+      -- so remote views are untouched, and GUI elements are destroyed anyway,
+      -- Just clear track eneity selector.
+      if player.cursor_stack and player.cursor_stack.valid_for_read and
+        player.cursor_stack.name == "windowed-cameras-track-entity-selector"
+      then
+        player.cursor_stack.clear()
+      end
+
+      for _, gui_element in ipairs(player.gui.screen.children) do
+        -- Migrate camera window data from being stored in LuaGuiElement states to storage table.
+        if util.string_starts_with(gui_element.name, "windowed-cameras-camera-window-main-") then
+          local tags = gui_element.tags
+          if type(tags.ordinal) ~= "number" then goto continue end
+          local camera = gui_element.children[2]["camera-view"]
+
+          local window_obj = setmetatable({
+            player = player,
+            ordinal = tags.ordinal--[[@as number]],
+            view_settings = {
+              position = {x = camera.position.x, y = camera.position.y},
+              surface_index = camera.surface_index,
+              zoom = camera.zoom,
+              entity = camera.entity,
+            },
+            window_settings = {
+              size = {x = gui_element.style.minimal_width, y = gui_element.style.minimal_height},
+            },
+          }, CameraWindow.prototype)
+          storage.players[player.index].camera_windows[window_obj.ordinal] = window_obj
+
+          gui_element.destroy()
+
+        -- Discard old camera window menus.
+        elseif util.string_starts_with(gui_element.name, "windowed-cameras-camera-window-menu-") then
+          gui_element.destroy()
+        end
+        ::continue::
+      end
+
+    end
+  end,
 }
 
 return migrations
